@@ -1,17 +1,23 @@
 import typing
 import pygame
-from System import BaseSystem
 from collections import defaultdict
-from Drawable import Drawable
+from .System import BaseSystem
+from . import Drawable
+__all__ = [
+    'Engine','EngineEvent','BaseSystem','pygame','Drawable'
+]
 
 TS = typing.TypeVar('TS',bound=BaseSystem)
 P = typing.ParamSpec('P')
+class EngineEvent:
+    START = 1
+    STOP = 2
 
-class Game:
+class Engine:
     systems:list[BaseSystem]
-    layers:defaultdict[int,list[Drawable]]
+    layers:defaultdict[int,list[Drawable.Drawable]]
     dt:float
-
+    __slots__ = 'window','running','systems','layers','clock','dt','window_clear_color','events'
     def __init__(self):
         self.window = pygame.Window()
         self.running = False
@@ -40,17 +46,20 @@ class Game:
         system.engine = self
         system.__init__(*args,**kwargs)
         self.systems.append(system)
+
+    def removeSystem(self,system:BaseSystem):
+        self.systems.remove(system)
         
     def _broadcastEngineEvent(self,event):
         for system in self.systems:
             system.onEngineEvent(event)
-            
 
     def run(self):
         self.running = True
         screen = self.window.get_surface()
+        self._broadcastEngineEvent(EngineEvent.START)
         while self.running:
-            for event in pygame.event.get(): pass
+            self.events = pygame.event.get()
             for system in self.systems: system.update()
             for system in self.systems: system.draw()
             
@@ -60,6 +69,7 @@ class Game:
             for layer_num in sorted(self.layers.keys()):
                 for drawable in self.layers[layer_num]:
                     drawable.draw(screen)
+
             self.layers.clear()
             
             self.window.flip()
