@@ -3,6 +3,7 @@ import pygame
 from collections import defaultdict
 from .System import BaseSystem
 from . import Drawable
+from .AssetLoading.AssetLoader import AssetManager
 __all__ = [
     'Engine','EngineEvent','BaseSystem','pygame','Drawable'
 ]
@@ -10,24 +11,29 @@ __all__ = [
 TS = typing.TypeVar('TS',bound=BaseSystem)
 P = typing.ParamSpec('P')
 class EngineEvent:
-    START = 1
-    STOP = 2
+    INITIALIZED = 1
+    STARTED = 2
+    STOPPED = 3
 
 class Engine:
     systems:list[BaseSystem]
     layers:defaultdict[int,list[Drawable.Drawable]]
     dt:float
-    __slots__ = 'window','running','systems','layers','clock','dt','window_clear_color','events'
+    # __slots__ = 'window','running','systems','layers','clock','dt','window_clear_color','events'
     def __init__(self):
         self.window = pygame.Window()
         self.running = False
+        self.initialized = False
         self.systems = []
         self.layers = defaultdict(list)
         self.clock = pygame.Clock()
         self.dt = 0
         self.window_clear_color:pygame.typing.ColorLike|None = None
-        
-    def draw(self,drawable:Drawable,layer:int=0):
+        self.assetManager = AssetManager()
+
+        self.on_initialize_callbacks:list[typing.Callable[[],typing.Any]] = []
+
+    def draw(self,drawable:Drawable.Drawable,layer:int=0):
         self.layers[layer].append(drawable)
         
     def getSystem(self,type_:type[TS],name:str|None=None) -> TS:
@@ -44,8 +50,11 @@ class Engine:
         system:TS = object.__new__(type_) #type: ignore
         system.name = name
         system.engine = self
-        system.__init__(*args,**kwargs)
+        system._params = args,kwargs
+        if self.initialized:
+            system.__init__(*args,**kwargs)
         self.systems.append(system)
+        return system
 
     def removeSystem(self,system:BaseSystem):
         self.systems.remove(system)
@@ -53,11 +62,21 @@ class Engine:
     def _broadcastEngineEvent(self,event):
         for system in self.systems:
             system.onEngineEvent(event)
+            
+    def initialize(self):
+        self.initialized = True
+        for system in self.systems:
+            args,kwargs = system._params
+            system.__init__(*args,**kwargs)
+        self._broadcastEngineEvent(EngineEvent.INITIALIZED)
+        
 
     def run(self):
+        if not self.initialized:
+            self.initialize()
         self.running = True
         screen = self.window.get_surface()
-        self._broadcastEngineEvent(EngineEvent.START)
+        self._broadcastEngineEvent(EngineEvent.STARTED)
         while self.running:
             self.events = pygame.event.get()
             for system in self.systems: system.update()

@@ -1,6 +1,7 @@
+import pygame
+import typing
 from pygame import Surface
 from typing import Protocol
-import pygame
 
 class Drawable(Protocol):
     def draw(self,surf:Surface): ...
@@ -38,3 +39,21 @@ class Rect:
             self.border_bottom_left_radius,
             self.border_bottom_right_radius,
         )
+        
+class Future:
+    def __init__(self,func:typing.Callable[...,typing.Any],*args,**kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        
+    def draw(self,surf:Surface):
+        self.func(surf,*self.args,**self.kwargs)
+        
+class FBlits:
+    __slots__ = 'blit_sequence','special_flags'
+    def __init__(self,blit_sequence:typing.Iterable[tuple[Surface,pygame.typing.RectLike]],special_flags:int=0):
+        self.blit_sequence = blit_sequence
+        self.special_flags = special_flags
+        
+    def draw(self,surf:Surface):
+        surf.fblits(self.blit_sequence,self.special_flags)

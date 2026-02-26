@@ -5,6 +5,7 @@ if typing.TYPE_CHECKING:
 class BaseSystem:
     name:str
     engine:'Engine'
+    _params:tuple[tuple[typing.Any,...],typing.Mapping[str,typing.Any]]
     __slots__ = 'name','engine'
     
     def onEngineEvent(self,event): ...

@@ -1,0 +1,4 @@
+type: Surface
+path: resources/white_dot.png
+convert:opaque
+scale: 12, 12
