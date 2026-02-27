@@ -1,9 +1,16 @@
-from Engine import *
-from Scripts.Camera import Camera
+from typing import Any, Callable
 
-class Character(BaseSystem):
-    def __init__(self,pos:pygame.Vector2):
+from Engine.Serialize import Reader, Writer
+from Scripts.Camera import Camera
+from Engine import *
+class Character(BaseSystem[pygame.Vector2]):
+    def getState(self):
+        return (self.pos,)
+    
+    def setState(self,pos:pygame.Vector2):
         self.pos = pos
+        
+    def init(self):
         self.k_up = pygame.K_w
         self.k_down = pygame.K_s
         self.k_right = pygame.K_d
@@ -20,4 +27,18 @@ class Character(BaseSystem):
         r = pygame.Rect(0,0,10,10)
         camera = self.engine.getSystem(Camera)
         r.center = self.pos + camera.offset
+        
         self.engine.draw(Drawable.Rect('white',r))
+
+    # def serialize(self, writer: Writer):
+    #     super().serialize(writer)
+    #     writer.writeFloat(float(self.pos.x))
+    #     writer.writeFloat(float(self.pos.y))
+        
+    # @classmethod
+    # def deserialize(cls, reader: Reader) -> tuple[tuple[Any, ...], dict[str, Any]]:
+    #     args,kwargs = super().deserialize(reader)
+    #     x = reader.readFloat()
+    #     y = reader.readFloat()
+    #     pos = pygame.Vector2(x,y)
+    #     return args+(pos,),kwargs

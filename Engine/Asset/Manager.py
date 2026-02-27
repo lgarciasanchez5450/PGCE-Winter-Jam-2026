@@ -10,6 +10,7 @@ class AssetManager:
         self.cache:dict[str,weakref.ReferenceType] = {}
         self.asset_type_loaders:dict[type,type[AssetLoader]] = {}
         self.addAssetLoader(pygame.Surface,SurfaceLoader)
+        self.addAssetLoader(pygame.Font,FontLoader)
    
     def addAssetLoader(self,typ:type[T],loader:type[AssetLoader[T]]):
         if typ in self.asset_type_loaders:
@@ -23,8 +24,7 @@ class AssetManager:
         '''
         with open(path) as file:
             contents = file.read()
-        
-        loader:AssetLoader[T] = self.asset_type_loaders[typ]()
+        loader:AssetLoader[T] = self.asset_type_loaders[typ](self)
         
         for line in contents.splitlines():
             key,_,value = line.partition(':')

@@ -1,20 +1,40 @@
+import typing
+from .Serialize import Writer, Reader,addSerializable
 
 import numpy as np
 import numpy.typing as npt
-import typing
+
 
 Vec2_NPCompat = tuple[float|np.floating,float|np.floating]|npt.NDArray[np.floating]
 
 T = typing.TypeVar('T',bound=np.floating)
 
+def serializeNDArray(writer:Writer,arr:np.ndarray):
+    writer.write([int(s) for s in arr.shape])
+    writer.writeStr(str(arr.dtype))
+    writer.writeInt(arr.nbytes)
+    writer.buf.extend(np.ascontiguousarray(arr).view(np.uint8))
+
+def deserializeNDArray(reader:Reader) -> np.ndarray:
+    shape = tuple(reader.readList(int))
+    dtype = np.dtype(reader.readStr())
+    buf_len = reader.readInt()
+    
+    buf = reader.buf[reader.i:reader.i+buf_len]
+    reader.i += buf_len
+    arr = np.frombuffer(buf,dtype)
+    arr.shape = shape
+    return arr
+
+addSerializable(np.ndarray,serializeNDArray,deserializeNDArray)
+
 class VerletPhysics:
-    __slots__ = 'dt','capacity','size', \
-        'pos','last_pos','id_to_ind','ind_to_id'
+    __slots__ = 'dt','capacity','size', 'pos','last_pos','id_to_ind','ind_to_id'
     def __init__(self,particles:int,dt:float):
         self.dt = dt
         self.capacity = particles
         self.size = particles
-        self.pos = np.empty((self.capacity,2),np.float64)
+        self.pos = np.empty((self.capacity,2),np.float64) #sync dtypes to .deserialize method
         self.last_pos = np.empty((self.capacity,2),np.float64)
         self.id_to_ind = np.arange(self.capacity,dtype=np.intp)
         self.ind_to_id = np.arange(self.capacity,dtype=np.intp)
@@ -90,3 +110,40 @@ class VerletPhysics:
         self.id_to_ind = id_to_ind
         self.ind_to_id = ind_to_id
         self.capacity = new_capacity
+
+    @staticmethod
+    def serialize(writer: Writer,self:'VerletPhysics'):
+        writer.writeFloat(float(self.dt))
+        writer.writeInt(int(self.capacity))
+        writer.writeInt(int(self.size))
+        writer.write(self.pos)
+        writer.write(self.last_pos)
+        writer.write(self.id_to_ind)
+        writer.write(self.ind_to_id)
+        
+    @classmethod
+    def deserialize(cls, reader: Reader) -> 'VerletPhysics':
+        obj = VerletPhysics.__new__(VerletPhysics)
+        dt = reader.readFloat()
+        capacity = reader.readInt()
+        size = reader.readInt()
+        pos = reader.read(np.ndarray)
+        last_pos = reader.read(np.ndarray)
+        id_to_ind = reader.read(np.ndarray)
+        ind_to_id = reader.read(np.ndarray)
+        
+        obj.dt = dt
+        obj.capacity = capacity
+        obj.size = size
+        obj.pos = pos
+        obj.last_pos = last_pos
+        obj.id_to_ind = id_to_ind
+        obj.ind_to_id = ind_to_id
+        return obj
+    
+    def __eq__(self,other):
+        if not isinstance(other,VerletPhysics): return False
+        return bool((self.dt == other.dt) and (self.capacity == other.capacity) and (self.size == other.size) and \
+            (np.all(self.pos==other.pos)) and (np.all(self.last_pos==other.last_pos)) and (np.all(self.id_to_ind==other.id_to_ind)) and (np.all(self.ind_to_id==other.ind_to_id)))
+
+addSerializable(VerletPhysics,VerletPhysics.serialize,VerletPhysics.deserialize)

@@ -2,26 +2,69 @@ import typing
 import pygame
 from collections import defaultdict
 from .System import BaseSystem
-from . import Drawable
-from .AssetLoading.AssetLoader import AssetManager
+from .Asset.Manager import AssetManager
+from .Drawable import Drawable
+from .Serialize import Reader, Writer,isSerializeable
 __all__ = [
-    'Engine','EngineEvent','BaseSystem','pygame','Drawable'
+    'Engine','EngineEvent'
 ]
 
-TS = typing.TypeVar('TS',bound=BaseSystem)
-P = typing.ParamSpec('P')
+TT = typing.TypeVarTuple('TT')
+TBS = typing.TypeVar('TBS',bound=BaseSystem)
 class EngineEvent:
     INITIALIZED = 1
     STARTED = 2
     STOPPED = 3
 
+class EngineState:
+    systems:list[tuple[str,str,tuple]]
+
+    def serialize(self) -> bytes:
+        writer = Writer()
+        writer.writeInt(len(self.systems))
+        for fqn,name,state in self.systems:
+            writer.writeStr(fqn)
+            writer.writeStr(name)
+            writer.writeInt(len(state))
+            for item in state:
+                writer.write(type(item))
+                writer.write(item)
+        # writer.printDebug()
+        return writer.buf
+    
+    def __repr__(self):
+        return repr(self.systems)
+    
+    def __eq__(self,other:typing.Any) -> bool:
+        if not isinstance(other,EngineState): return False
+        return self.systems == other.systems
+    @classmethod
+    def deserialize(cls,b:bytes) -> 'EngineState':
+        reader = Reader(b)
+        num_systems = reader.readInt()
+        systems:list[tuple[str,str,tuple[typing.Any,...]]] = []
+        for _ in range(num_systems):
+            fqn = reader.readStr()
+            name = reader.readStr()
+            state_len = reader.readInt()
+            state:list[typing.Any] = []
+            for _ in range(state_len):
+                typ = reader.readType()
+                obj = reader.read(typ)
+                state.append(obj)
+            systems.append((fqn,name,tuple(state)))
+
+        e_state = EngineState()
+        e_state.systems = systems
+        return e_state
+
 class Engine:
     systems:list[BaseSystem]
-    layers:defaultdict[int,list[Drawable.Drawable]]
+    layers:defaultdict[int,list[Drawable]]
     dt:float
-    # __slots__ = 'window','running','systems','layers','clock','dt','window_clear_color','events'
     def __init__(self):
         self.window = pygame.Window()
+        self.window.get_surface()
         self.running = False
         self.initialized = False
         self.systems = []
@@ -31,12 +74,11 @@ class Engine:
         self.window_clear_color:pygame.typing.ColorLike|None = None
         self.assetManager = AssetManager()
 
-        self.on_initialize_callbacks:list[typing.Callable[[],typing.Any]] = []
-
-    def draw(self,drawable:Drawable.Drawable,layer:int=0):
+   
+    def draw(self,drawable:Drawable,layer:int=0):
         self.layers[layer].append(drawable)
         
-    def getSystem(self,type_:type[TS],name:str|None=None) -> TS:
+    def getSystem(self,type_:type[TBS],name:str|None=None) -> TBS:
         for system in self.systems:
             if type(system) is not type_:
                 continue
@@ -46,28 +88,42 @@ class Engine:
             return system
         raise LookupError
        
-    def addSystem(self,type_:typing.Callable[P,TS],name:str,*args:P.args,**kwargs:P.kwargs):
-        system:TS = object.__new__(type_) #type: ignore
-        system.name = name
-        system.engine = self
-        system._params = args,kwargs
+    def addSystem(self,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
+        system = typ(self,name)
+        system.setState(*args)
         if self.initialized:
-            system.__init__(*args,**kwargs)
+            system.init()
         self.systems.append(system)
         return system
 
     def removeSystem(self,system:BaseSystem):
         self.systems.remove(system)
+
+    def getState(self) -> EngineState:
+        e_state = EngineState()
+        e_state.systems = []
+        for system in self.systems:
+            state = system.getState()
+            if not isSerializeable(state):
+                raise RuntimeError(f'Serialization Error: System \'{type(system).__name__}\' returned an unserializable state: {repr(state)}')
+            e_state.systems.append((str(system._fqn),str(system.name),state))
+        return e_state
+    
+    def loadState(self,state:EngineState):
+        for sys_fqn,sys_name,sys_state  in state.systems:
+            system_cls = BaseSystem._fqn_to_cls[sys_fqn]
+            self.addSystem(system_cls,sys_name,*sys_state)
         
+
     def _broadcastEngineEvent(self,event):
         for system in self.systems:
             system.onEngineEvent(event)
+          
             
     def initialize(self):
         self.initialized = True
         for system in self.systems:
-            args,kwargs = system._params
-            system.__init__(*args,**kwargs)
+            system.init()
         self._broadcastEngineEvent(EngineEvent.INITIALIZED)
         
 

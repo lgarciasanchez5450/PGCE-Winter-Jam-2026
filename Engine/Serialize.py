@@ -3,11 +3,26 @@ import types
 
 T = typing.TypeVar('T')
 TC = typing.TypeVar('TC',bound=typing.Callable)
-
+trtable:dict[str,type] = {}
+twtable:dict[type,str] = {}
 wtable = {}
 rtable = {}
+DEBUG = True
 def w(typ:type[T]):
-    def _(func:typing.Callable[[typing.Any,T],typing.Any]):
+    addSerializableType(typ,typ.__name__)
+    def _(func:TC) -> TC:
+        if DEBUG:
+            def wrapper(r:'Writer',t=None,f=func):
+                start = len(r.buf)
+                r.debug_i += 1
+                out = f(r,t)
+                r.debug_i -= 1
+                end = len(r.buf)
+                if r.debug_i == 0:
+                    r.debug.append((end-start,typ.__name__))
+                return out
+            func = wrapper#type: ignore
+
         wtable[typ] = func
         return func
     return _
@@ -15,18 +30,109 @@ def w(typ:type[T]):
 def r(typ):
     def _(func:TC) -> TC:
         if func.__code__.co_argcount == 1:
+            if DEBUG:
+                def wrapper(r:'Reader',t=None,f=func):
+                    start = r.i
+                    r.debug_i += 1
+                    out = f(r)
+                    r.debug_i -= 1
+                    end = r.i
+            
+                    if r.debug_i == 0:
+                        r.debug.append((end-start,typ.__name__))
+                    return out
+                func = wrapper#type: ignore
             rtable[typ] = lambda s,t:func(s)
+                
         elif func.__code__.co_argcount == 2:
+            if DEBUG:
+                def wrapper(r:'Reader',t=None,f=func):
+                    start = r.i
+                    r.debug_i += 1
+                    out = f(r,t)
+                    r.debug_i -= 1
+                    end = r.i
+            
+                    if r.debug_i == 0:
+                        r.debug.append((end-start,typ.__name__))
+                    return out
+                func = wrapper#type: ignore
             rtable[typ] = func
         else:
             raise NotImplementedError
         return func
     return _
 
+
+def addSerializableType(typ:type,name:str|None=None):
+    name = name if name is not None else typ.__name__
+    if name in trtable: raise NameError(f'Error Registering Type {repr(typ.__name__)}, Name {repr(name)} already maps to type {repr(trtable[name])}')
+    if typ in twtable: raise TypeError(f'Error Registering Type {repr(typ.__name__)}, Type {repr(typ)} already maps to name {repr(twtable[typ])}')
+    trtable[name] = typ
+    twtable[typ] = name
+    
+def addSerializable(typ:type[T],ser:typing.Callable[['Writer',T],typing.Any],deser:typing.Callable[['Reader'],T]):
+    if (typ in wtable) or (typ in rtable): raise TypeError(f'Type {repr(typ.__name__)} already is serializable.')
+    wtable[typ] = ser
+    # r(typ)(deser)
+    rtable[typ] = lambda s,t,f=deser:f(s)
+    try:
+        addSerializableType(typ)
+    except (NameError, TypeError):
+        pass
+
+def isSerializeable(obj:typing.Any) -> bool:
+    typ = type(obj)
+    if typ in wtable:
+        if typ in (set,tuple,list):
+            return all(map(isSerializeable,obj))
+        return True
+    return False
+
 class Writer:
     def __init__(self):
         self.buf = bytearray()
- 
+        if __debug__:
+            self.debug:list[tuple[int,str]] = []
+            self.debug_i = 0
+            
+    def printDebug(self):
+        if not __debug__: return
+        a = ' '+bytes(self.buf).hex(' ')
+        out = '|'
+        for l,n in self.debug:
+            sl = l*3-1
+            if sl > len(n):
+                out += f'{n.center(sl)}|'
+            elif l > 0:
+                
+                out += f'{n[-sl:]}|'
+            else:
+                out += ''
+                
+        line_width = 200
+        while len(a) > line_width:
+            print(a[:line_width])
+            print(out[:line_width])
+            a = a[line_width:]
+            out = out[line_width:]
+
+
+        
+    @w(int)
+    def writeInt(self,x:int):
+        b = bytearray()
+        while x:
+            v = x&0xFF
+            b.append(v|0b10000000)
+            x >>= 7
+        b.reverse()
+        self.buf.extend(b)
+        self.buf.append(0)
+    
+    @w(type(None))
+    def writeNone(self):
+        return
         
     @w(bool)
     def writeBool(self,b:bool):
@@ -36,7 +142,7 @@ class Writer:
             self.buf.append(0)
             
     @w(bytes)
-    def writeBytes(self,b:bytes):
+    def writeBytes(self,b:typing.Collection[int]):
         self.writeInt(len(b))
         self.buf.extend(b)
     
@@ -60,7 +166,6 @@ class Writer:
             self.writeInt(n)
             self.writeInt(d)
             
-    
     def writeIterable(self,iter:typing.Iterable):
         for item in iter:
             self.write(item)
@@ -76,6 +181,10 @@ class Writer:
     
     def length(self):
         return len(self.buf)
+      
+    @w(type)
+    def writeType(self,typ:type):
+        self.writeStr(twtable[typ])
             
     def write(self,x:typing.Any):
         typ = type(x)
@@ -88,7 +197,25 @@ class Reader:
     def __init__(self,buf:bytes|bytearray) -> None:
         self.buf = buf
         self.i = 0
-    
+        if __debug__:
+            self.debug:list[tuple[int,str]] = []
+            self.debug_i = 0    
+            
+    def printDebug(self):
+        if not __debug__: return
+        print(' '+bytes(self.buf).hex(' '))
+        out = '|'
+        for l,n in self.debug:
+            sl = l*3-1
+            if sl > len(n):
+                out += f'{n.center(sl)}|'
+            elif l > 0:
+                
+                out += f'{n[-sl:]}|'
+            else:
+                out += ''
+        print(out)
+            
     @r(int)   
     def readInt(self):
         x = 0
@@ -105,6 +232,10 @@ class Reader:
         out = bool(self.buf[self.i])
         self.i += 1
         return out
+    
+    @r(type(None))
+    def readNone(self):
+        return None
     
     @r(bytes)
     def readBytes(self):
@@ -124,7 +255,7 @@ class Reader:
         self.i += 1
         if v == 0:
             n = self.readInt()
-            d = self.readInt()
+            d = self.readInt() or 1
             return n/d
         elif v== 1:
             positive = self.readBool()
@@ -159,6 +290,11 @@ class Reader:
         if typ is list or typ is set:
             args = args[0]
         return rtable[typ](self,args)
+        
+    @r(type)
+    def readType(self):
+        return trtable[self.readStr()]
+
         
     @property
     def done(self): return self.i >= len(self.buf)
