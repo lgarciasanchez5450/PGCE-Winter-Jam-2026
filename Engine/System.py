@@ -37,7 +37,7 @@ class BaseSystem[*T]:
     
     def update(self): ... #on every frame
     
-    def draw(self): ...# on every frame
+    def draw(self): ... # on every frame
 
     def setState(self,*state:*T): raise NotImplementedError(f'{repr(type(self))} must define .setState(*args)')
     
