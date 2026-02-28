@@ -40,29 +40,25 @@ class Game(BaseSystem[()]):
         pass
         # self.map.world.append()
         
-    # def serialize(self, writer: Writer):
-    #     super().serialize(writer)
         
-    # @classmethod
-    # def deserialize(cls, reader: Reader) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    #     return super().deserialize(reader)
-
 def main():
-    engine = Engine()
-    engine.window_clear_color = 0
+    window = pygame.Window()
+    engine = Engine(window.get_surface())
     engine.addSystem(Game,'')
     engine.addSystem(Camera,'',pygame.Vector2())
     engine.addSystem(Character,'',pygame.Vector2())
     engine.addSystem(Map,'',VerletPhysics(0,0.2),[])
-    engine.initialize()
-    engine_state = engine.getState()
-    print(engine_state)
-    print(engine_state.serialize().__len__(),'bytes')
-    cpy = EngineState.deserialize(engine_state.serialize())
-    print(cpy==engine_state)
-    print(cpy)
-
-    engine.run()
+    engine.Initialize()
+    clock = pygame.Clock()
+    engine.running = True
+    engine.broadcastEvent(EngineEvent.STARTED)
+    while engine.running:
+        
+        engine.Update(pygame.event.get())
+        engine.screen.fill('black')
+        engine.Draw()
+        window.flip()
+        engine.dt = clock.tick(60) / 1_000
            
 if __name__ == '__main__':
     pygame.init()

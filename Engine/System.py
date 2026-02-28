@@ -13,7 +13,6 @@ class BaseSystem[*T]:
     _fqn_to_cls = _fqn_to_cls
     name:str
     engine:'Engine'
-    # _params:tuple[tuple[typing.Any,...],typing.Mapping[str,typing.Any]]
     _fqn:str = 'BaseSystem'
     __slots__ = 'name','engine'
     

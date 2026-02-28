@@ -1,9 +1,8 @@
 import pygame
 import typing
 from pygame import Surface
-from typing import Protocol
 
-class Drawable(Protocol):
+class Drawable(typing.Protocol):
     def draw(self,surf:Surface): ...
     
 class Rect:
@@ -39,6 +38,28 @@ class Rect:
             self.border_bottom_left_radius,
             self.border_bottom_right_radius,
         )
+
+class Blit:
+    __slots__ = 'source','dest','area','special_flags'
+    def __init__(self,source:Surface,dest:pygame.typing.RectLike=(0, 0),area:pygame.typing.RectLike|None=None,special_flags:int=0):
+        self.source = source
+        self.dest = dest
+        self.area = area
+        self.special_flags = special_flags
+    
+    def draw(self,surf:Surface):
+        surf.blit(self.source,self.dest,self.area,self.special_flags)
+        
+class BlitFuture:
+    __slots__ = 'source','dest','area','special_flags'
+    def __init__(self,source:typing.Callable[[],Surface],dest:pygame.typing.RectLike=(0, 0),area:pygame.typing.RectLike|None=None,special_flags:int=0):
+        self.source = source
+        self.dest = dest
+        self.area = area
+        self.special_flags = special_flags
+    
+    def draw(self,surf:Surface):
+        surf.blit(self.source(),self.dest,self.area,self.special_flags)
         
 class Future:
     def __init__(self,func:typing.Callable[...,typing.Any],*args,**kwargs):

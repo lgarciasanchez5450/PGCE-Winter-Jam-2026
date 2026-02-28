@@ -15,7 +15,7 @@ class Camera(BaseSystem[pygame.Vector2]):
         return (self.pos,)
         
     def update(self): 
-        screen_size = self.engine.window.size
+        screen_size = self.engine.screen.size
         self.offset = (
             -self.pos.x.__floor__() + screen_size[0]//2,
             -self.pos.y.__floor__() + screen_size[1]//2

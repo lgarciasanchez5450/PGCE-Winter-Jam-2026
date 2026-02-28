@@ -27,9 +27,10 @@ class AssetManager:
         loader:AssetLoader[T] = self.asset_type_loaders[typ](self)
         
         for line in contents.splitlines():
+            if not line: continue
             key,_,value = line.partition(':')
             if not _:
-                raise AssetSyntaxError
+                raise AssetSyntaxError(f'Invalid Line in {path}: {repr(line)}')
             loader.addDescriptor(key.strip(),value.strip())
         return loader.build()
 
