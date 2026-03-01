@@ -101,31 +101,25 @@ def solve(g_state:GameState,tick:int,path:list[int],n:int):
     cur_node = g_state.nodes[cur_pos]
     if cur_node.explosion_time > 0 and cur_node.explosion_time <= tick:
         return -1
-    min_length_of_path = n+1
+    
     for edge in g_state.edges:
         if not edge.cycle[(g_state.start_tick + tick)%len(edge.cycle)]: continue
         if cur_pos == edge.a_node:
             path[tick+1] = edge.b_node
             length_of_path = solve(g_state,tick+1,path,n-1)
-            if length_of_path != -1:
-                if length_of_path < min_length_of_path:
-                    min_length_of_path = length_of_path
-                    # min_plen_path = path[:min_length_of_path+1]
-                # return length_of_path + 1
+            if length_of_path == -1:
+                return -1
+            else:
+                return length_of_path + 1
             
         if cur_pos == edge.b_node:
             path[tick+1] = edge.a_node
             length_of_path = solve(g_state,tick+1,path,n-1)
-            if length_of_path != -1:
-                if length_of_path < min_length_of_path:
-                    min_length_of_path = length_of_path
-                    # min_plen_path = path[:min_length_of_path+1]
-                    
-    if min_length_of_path == n+1:
-        return -1
-    # path[:min_length_of_path+1] = min_plen_path
-    return min_length_of_path+1
-    
+            if length_of_path == -1:
+                return -1
+            else:
+                return length_of_path + 1
+    return -1
     
 
 state = GameState()
@@ -146,7 +140,7 @@ for start_pos in range(len(state.nodes)):
             path[0] = start_pos
             
             if (len_path:=solve(state,0,path,max_depth)) != -1:
-                solutions.append((start_pos,end_pos,tick,path.copy()))
+                solutions.append((start_pos,end_pos,tick,path[:len_path+1]))
                 # print('start:',start_pos)
                 # print('end:',end_pos)
                 # print('tick:',tick)
@@ -154,7 +148,7 @@ for start_pos in range(len(state.nodes)):
                 # print('#####################')
                 
 solutions.sort(key=lambda x:len(x[3]),reverse=True)
-for start_pos,end_pos,tick,path in solutions[:5]:
+for start_pos,end_pos,tick,path in solutions[:10]:
     print('start:',start_pos)
     print('end:',end_pos)
     print('tick:',tick)
