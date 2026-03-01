@@ -636,7 +636,7 @@ ALT+ENTER - Accept
                     rel -= offset
             elif kd[pg.K_ESCAPE]:
                 searching = False
-                search_for:str|None = None
+                search_for = None
             elif kd[pg.K_RETURN]:
                 searching = False
             else:

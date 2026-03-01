@@ -37,12 +37,15 @@ class Game(BaseSystem[()]):
             print(engine_state)
             print(engine_state.serialize())
             print(EngineState.deserialize(engine_state.serialize()))
+            self.engine.running = False
         pass
         # self.map.world.append()
-        
+
         
 def main():
+    
     window = pygame.Window()
+    
     engine = Engine(window.get_surface())
     engine.addSystem(Game,'')
     engine.addSystem(Camera,'',pygame.Vector2())
@@ -59,6 +62,7 @@ def main():
         engine.Draw()
         window.flip()
         engine.dt = clock.tick(60) / 1_000
+        
            
 if __name__ == '__main__':
     pygame.init()

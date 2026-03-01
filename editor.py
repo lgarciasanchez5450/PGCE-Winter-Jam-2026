@@ -32,6 +32,11 @@ def main():
         editor_engine.Draw()
         window.flip()
         editor_engine.dt = clock.tick(60) / 1_000
+        
+
+    
+    
+        
            
 if __name__ == '__main__':
     pygame.init()
