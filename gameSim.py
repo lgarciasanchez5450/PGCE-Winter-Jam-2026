@@ -67,7 +67,7 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
         node = Node()
         if rng.randint(0,1):
             node.freeze_time = -1
-            node.explosion_time = rng.randint(0,e)
+            node.explosion_time = rng.randint(2,e)
         else:
             node.freeze_time = rng.randint(0,e)
             node.explosion_time = -1
@@ -94,7 +94,9 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
             edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
         else:
             edge.cycle = [True]
-        edges.append(edge)
+
+        if any(edge.cycle): # if this edge exists for some tick, add it
+            edges.append(edge)
         
     return nodes,edges
   
@@ -105,7 +107,7 @@ def solve(g_state:GameState,tick:int,path:list[int],best_path:list[int],n:int):
     if tick+1 > len(best_path): return -1
     if n <= 0: return -1
     cur_node = g_state.nodes[cur_pos]
-    if cur_node.explosion_time > 0 and cur_node.explosion_time <= tick:
+    if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
         return -1
     min_len=-1
     for edge in g_state.edges:
@@ -125,7 +127,17 @@ def solve(g_state:GameState,tick:int,path:list[int],best_path:list[int],n:int):
                     best_path[:] = path[:tick+length_of_path+1]
     return min_len
 
-def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int):
+
+def solutionUsesAllCycles(g_state:GameState,path:list[int]):
+    # for each edge that cycles, the solution must include that pair of nodes as adjacent numbers (in any order)
+    edges_that_cycle = [edge for edge in g_state.edges if not all(edge.cycle)] # if edge.cycle contains any 0s, the edge actually cycles
+    
+    for edge in edges_that_cycle:
+        if not any([[edge.a_node, edge.b_node] == sorted(path[i:i+2]) for i in range(len(path)-1)]):
+            return False
+    return True
+
+def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int,use_all_cycles:bool):
     master_rng = random.Random()
     while True:
         state = GameState()
@@ -140,7 +152,7 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
                 for end_pos in range(len(state.nodes)):
                     state.end_node = end_pos
                     if start_pos == end_pos: continue
-                    for tick in range(min(25,len(state.edges))):
+                    for tick in range(min(25,e_cycle_max)):
                         state.start_tick = tick
                         path[0] = start_pos
                         best_path = [-1]*(max_depth+1)
@@ -158,6 +170,7 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
             t = (start_pos,end_pos)
             if t in got: continue
             if len(path) < min_solution_len: continue
+            if use_all_cycles and not solutionUsesAllCycles(state, path): continue
             got.add(t)
             unique_start_end_solutions.append((start_pos,end_pos,tick,path))
         print(f'[{", ".join([f'{i}:{n}' for i,n in enumerate(state.nodes)])}]')
@@ -168,15 +181,19 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
             print('tick:',tick)
             print(path)
             print('#####################')
-        yield
+
+        if len(unique_start_end_solutions) > 0: 
+            yield state, unique_start_end_solutions[0]
         
 if __name__ == '__main__':
-    nodes = 5
-    edgePercent = 0.45
+    nodes = 6
+    edgePercent = 0.5
 
     edges = int(math.comb(nodes, 2) * edgePercent)
 
     max_cycle_edges = min(nodes, 3)
 
-    for x in generateInterestingGameStates(5,20,nodes,edges,2,max_cycle_edges):
+    for x in generateInterestingGameStates(5,20,nodes,edges,2,max_cycle_edges,True):
         input("Press enter to regenerate")
+
+# make generateInterestingGameStates yield gamestate and path 
