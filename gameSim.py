@@ -56,10 +56,10 @@ tick:{self.start_tick}
 import random
 
 
-def generateGraph(n:int,e:int,e_cycle_max:int,rng:random.Random) -> tuple[list[Node],list[Edge]]:
+def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Random) -> tuple[list[Node],list[Edge]]:
     if e<n-1: print('Bad!');raise Exception
     nodes = []
-    for _ in range(n):
+    for i in range(n):
         node = Node()
         if rng.randint(0,1):
             node.freeze_time = -1
@@ -72,7 +72,7 @@ def generateGraph(n:int,e:int,e_cycle_max:int,rng:random.Random) -> tuple[list[N
 
     connected:set[tuple[int,int]] = set()
     edges = []
-    for _ in range(e):
+    for i in range(e):
         while True:
             a = rng.randint(0,n-1)
             b = rng.randint(0,n-1)
@@ -86,7 +86,10 @@ def generateGraph(n:int,e:int,e_cycle_max:int,rng:random.Random) -> tuple[list[N
         edge = Edge()
         edge.a_node = a
         edge.b_node = b
-        edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
+        if i < max_cycle_edges:
+            edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
+        else:
+            edge.cycle = [True]
         edges.append(edge)
         
     return nodes,edges
@@ -100,7 +103,7 @@ def solve(g_state:GameState,tick:int,path:list[int],n:int):
         return False
     
     for edge in g_state.edges:
-        if not edge.cycle[g_state.start_tick + tick]: continue
+        if not edge.cycle[(g_state.start_tick + tick)%len(edge.cycle)]: continue
         if cur_pos == edge.a_node:
             path[tick+1] = edge.b_node
             if solve(g_state,tick+1,path,n-1):
@@ -114,7 +117,7 @@ def solve(g_state:GameState,tick:int,path:list[int],n:int):
 
 state = GameState()
 rng = random.Random(5)
-state.nodes,state.edges = generateGraph(10,10,5,rng)
+state.nodes,state.edges = generateGraph(3,5,5,0,rng)
 max_depth = 10
 path = [-1]*max_depth
 for start_pos in range(len(state.nodes)):
