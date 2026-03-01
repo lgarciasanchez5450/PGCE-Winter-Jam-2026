@@ -90,13 +90,16 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
         edge = Edge()
         edge.a_node = a
         edge.b_node = b
+
         if i < max_cycle_edges:
             edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
         else:
             edge.cycle = [True]
 
-        if any(edge.cycle): # if this edge exists for some tick, add it
-            edges.append(edge)
+        while not any(edge.cycle) or (all(edge.cycle) and len(edge.cycle) > 1):
+            edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
+
+        edges.append(edge)
         
     return nodes,edges
   
@@ -137,6 +140,16 @@ def solutionUsesAllCycles(g_state:GameState,path:list[int]):
             return False
     return True
 
+def filterSolutionsForAllCycleUse(state:GameState,solutions:list):
+    solution_blacklist = []
+    for start_pos,end_pos,tick,path in solutions:
+        if not solutionUsesAllCycles(state, path):
+            solution_blacklist.append((start_pos, end_pos)) 
+    
+    new_solutions = [solution for solution in solutions if (solution[0], solution[1]) not in solution_blacklist]
+
+    return new_solutions
+
 def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int,use_all_cycles:bool):
     master_rng = random.Random()
     while True:
@@ -163,14 +176,16 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
         print(f'{variations=} in {tmr.format()}')                
         solutions.sort(key=lambda x:len(x[3]),reverse=True)
         
-        
+        if use_all_cycles:
+            solutions = filterSolutionsForAllCycleUse(state, solutions)
+
         got:set[tuple[int,int]] = set()
         unique_start_end_solutions = []
+
         for start_pos,end_pos,tick,path in solutions:
             t = (start_pos,end_pos)
             if t in got: continue
             if len(path) < min_solution_len: continue
-            if use_all_cycles and not solutionUsesAllCycles(state, path): continue
             got.add(t)
             unique_start_end_solutions.append((start_pos,end_pos,tick,path))
         print(f'[{", ".join([f'{i}:{n}' for i,n in enumerate(state.nodes)])}]')
@@ -187,7 +202,7 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
         
 if __name__ == '__main__':
     nodes = 6
-    edgePercent = 0.5
+    edgePercent = 0.52
 
     edges = int(math.comb(nodes, 2) * edgePercent)
 
