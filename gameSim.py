@@ -95,40 +95,71 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
     return nodes,edges
        
 def solve(g_state:GameState,tick:int,path:list[int],n:int):
-    if g_state.start_node == g_state.end_node: return True
-    if n <= 0: return False
     cur_pos = path[tick]
+    if cur_pos == g_state.end_node: return 0
+    if n <= 0: return -1
     cur_node = g_state.nodes[cur_pos]
     if cur_node.explosion_time > 0 and cur_node.explosion_time <= tick:
-        return False
-    
+        return -1
+    min_length_of_path = n+1
     for edge in g_state.edges:
         if not edge.cycle[(g_state.start_tick + tick)%len(edge.cycle)]: continue
         if cur_pos == edge.a_node:
             path[tick+1] = edge.b_node
-            if solve(g_state,tick+1,path,n-1):
-                return True
+            length_of_path = solve(g_state,tick+1,path,n-1)
+            if length_of_path != -1:
+                if length_of_path < min_length_of_path:
+                    min_length_of_path = length_of_path
+                    # min_plen_path = path[:min_length_of_path+1]
+                # return length_of_path + 1
+            
         if cur_pos == edge.b_node:
             path[tick+1] = edge.a_node
-            if solve(g_state,tick+1,path,n-1):
-                return True
-    return False
+            length_of_path = solve(g_state,tick+1,path,n-1)
+            if length_of_path != -1:
+                if length_of_path < min_length_of_path:
+                    min_length_of_path = length_of_path
+                    # min_plen_path = path[:min_length_of_path+1]
+                    
+    if min_length_of_path == n+1:
+        return -1
+    # path[:min_length_of_path+1] = min_plen_path
+    return min_length_of_path+1
+    
     
 
 state = GameState()
 rng = random.Random(5)
-state.nodes,state.edges = generateGraph(3,5,5,0,rng)
+state.nodes,state.edges = generateGraph(5,6,5,0,rng)
 max_depth = 10
-path = [-1]*max_depth
+path = [-1]*(max_depth+1)
+print(state.edges)
+print(state.nodes)
+solutions = []
 for start_pos in range(len(state.nodes)):
+    state.start_node = start_pos
     for end_pos in range(len(state.nodes)):
+        state.end_node = end_pos
         if start_pos == end_pos: continue
-        for tick in range(25):
+        for tick in range(min(25,len(state.edges))):
             state.start_tick = tick
-            state.start_node = start_pos
-            state.end_node = end_pos
-            if solve(state,0,path,max_depth):
-                print(state)
+            path[0] = start_pos
+            
+            if (len_path:=solve(state,0,path,max_depth)) != -1:
+                solutions.append((start_pos,end_pos,tick,path.copy()))
+                # print('start:',start_pos)
+                # print('end:',end_pos)
+                # print('tick:',tick)
+                # print(path[:len_path])
+                # print('#####################')
+                
+solutions.sort(key=lambda x:len(x[3]),reverse=True)
+for start_pos,end_pos,tick,path in solutions[:5]:
+    print('start:',start_pos)
+    print('end:',end_pos)
+    print('tick:',tick)
+    print(path)
+    print('#####################')                
             
             
     
