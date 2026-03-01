@@ -1,3 +1,4 @@
+import zlib
 import debug
 class Node:
     freeze_time:int
@@ -126,7 +127,7 @@ def generateInterestingGameStates(max_depth:int,min_solution_len:int,n:int,e:int
     master_rng = random.Random()
     while True:
         state = GameState()
-        rng = random.Random(hash(str(master_rng.random())))
+        rng = random.Random(zlib.adler32(str(master_rng.random()).encode()))
         state.nodes,state.edges = generateGraph(n,e,e_cycle_max,max_cycle_edges,rng)
         path = [-1]*(max_depth+1)
         solutions = []
@@ -144,7 +145,6 @@ def generateInterestingGameStates(max_depth:int,min_solution_len:int,n:int,e:int
                         variations += 1
                         if solve(state,0,path,best_path,max_depth) != -1:
                             solutions.append((start_pos,end_pos,tick,best_path.copy()))
- 
 
         print(f'{variations=} in {tmr.format()}')                
         solutions.sort(key=lambda x:len(x[3]),reverse=True)
