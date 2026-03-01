@@ -49,7 +49,7 @@ class GameState:
         return f'''
 start:{self.start_node}
 end:{self.end_node}
-nodes:{self.nodes}
+nodes:{[f'{i}:{n}' for i,n in enumerate(self.nodes)]}
 edges:{self.edges}
 tick:{self.start_tick}    
     '''
@@ -123,7 +123,7 @@ def solve(g_state:GameState,tick:int,path:list[int],best_path:list[int],n:int):
                     best_path[:] = path[:tick+length_of_path+1]
     return min_len
 
-def generateInterestingGameStates(max_depth:int,min_solution_len:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int):
+def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int):
     master_rng = random.Random()
     while True:
         state = GameState()
@@ -158,7 +158,7 @@ def generateInterestingGameStates(max_depth:int,min_solution_len:int,n:int,e:int
             if len(path) < min_solution_len: continue
             got.add(t)
             unique_start_end_solutions.append((start_pos,end_pos,tick,path))
-        print(state.nodes)
+        print(f'[{", ".join([f'{i}:{n}' for i,n in enumerate(state.nodes)])}]')
         print(state.edges)
         for start_pos,end_pos,tick,path in unique_start_end_solutions:
             print('start:',start_pos)
@@ -169,5 +169,5 @@ def generateInterestingGameStates(max_depth:int,min_solution_len:int,n:int,e:int
         yield
         
 if __name__ == '__main__':
-    for x in generateInterestingGameStates(10,3,6,6,4,0):
-        input()
+    for x in generateInterestingGameStates(5,20,10,15,2,10):
+        input("Press enter to regenerate")
