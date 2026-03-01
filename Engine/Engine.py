@@ -78,6 +78,8 @@ class Engine:
         self.assetManager = AssetManager()
         self.async_ctx = Async.Context()
         
+        self.last_exception:typing.Optional[BaseException] = None
+        
         
     def draw(self,drawable:Drawable,layer:int=0):
         self.layers[layer].append(drawable)
@@ -95,7 +97,8 @@ class Engine:
        
     def addSystem[*TT](self,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
         system = typ(self,name)
-        system.setState(*args)
+        try:system.setState(*args)
+        except Exception: pass
         if self.initialized:
             system.init()
         self.systems.append(system)
@@ -111,7 +114,6 @@ class Engine:
         
     def checkCoroutine(self,coro:typing.Generator|typing.Awaitable):
         return self.async_ctx.isAlive(coro) # pyright: ignore[reportArgumentType]
-        
 
     def getState(self) -> EngineState:
         e_state = EngineState()
@@ -145,8 +147,17 @@ class Engine:
 
     def Update(self,events:list[pygame.Event]):
         self.events = events
-        for system in self.systems: system.update()
-        for system in self.systems: system.draw()
+        for system in self.systems:
+            try:
+                system.update()
+            except Exception as err:
+                raise
+                self.last_exception = err
+        for system in self.systems:
+            try:
+                system.draw()
+            except Exception: pass
+                # self.last_exception = err
         self.async_ctx.tick()
         
     def Draw(self):

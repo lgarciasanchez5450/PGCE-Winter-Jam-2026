@@ -7,8 +7,6 @@ import numpy.typing as npt
 
 Vec2_NPCompat = tuple[float|np.floating,float|np.floating]|npt.NDArray[np.floating]
 
-T = typing.TypeVar('T',bound=np.floating)
-
 def serializeNDArray(writer:Writer,arr:np.ndarray):
     writer.write([int(s) for s in arr.shape])
     writer.writeStr(str(arr.dtype))
@@ -39,14 +37,14 @@ class VerletPhysics:
         self.id_to_ind = np.arange(self.capacity,dtype=np.intp)
         self.ind_to_id = np.arange(self.capacity,dtype=np.intp)
         
-    def setPositions(self,pos:npt.NDArray[T],sync_vel:bool=False):
+    def setPositions(self,pos:npt.NDArray[np.floating]|typing.Sequence[typing.Iterable[float]],sync_vel:bool=False):
         if sync_vel:
             dif = self.pos - self.last_pos
-            self.pos[:] = pos
-            self.last_pos[:] = pos
+            self.pos[:] = pos  # type: ignore
+            self.last_pos[:] = pos # type: ignore
             self.last_pos -= dif
         else:
-            self.pos[:] = pos
+            self.pos[:] = pos # type: ignore
 
     def setVelocities(self,vel:npt.NDArray[np.floating]):
         self.last_pos[:] = self.pos
@@ -58,6 +56,12 @@ class VerletPhysics:
         new_positions += accel * (self.dt*self.dt)
         self.pos = new_positions
         self.last_pos = self.pos
+
+    def get(self,id:int):
+        return self.pos[self.id_to_ind[id]]
+    
+    def gets(self,ids:typing.Sequence[int]|npt.NDArray[np.integer]):
+        return self.pos[self.id_to_ind[ids]]
 
     def remove(self,id:int):
         self.size -= 1

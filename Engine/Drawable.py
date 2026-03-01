@@ -78,3 +78,26 @@ class FBlits:
         
     def draw(self,surf:Surface):
         surf.fblits(self.blit_sequence,self.special_flags)
+        
+class Line:
+    __slots__ = 'color','start_pos','end_pos','width'
+    def __init__(self,color:pygame.typing.ColorLike,start_pos: pygame.typing.Point,end_pos: pygame.typing.Point,width: int = 1):
+        self.color = color
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.width = width
+    
+    def draw(self,surf:Surface):
+        pygame.draw.line(surf,self.color,self.start_pos,self.end_pos,self.width)
+        
+        
+class Lines:
+    __slots__ = 'color','closed','points','width'
+    def __init__(self,color:pygame.typing.ColorLike,closed:bool,points: pygame.typing.SequenceLike[pygame.typing.Point],width: int = 1):
+        self.color = color
+        self.closed = closed
+        self.points = points
+        self.width = width
+    
+    def draw(self,surf:Surface):
+        pygame.draw.lines(surf,self.color,self.closed,self.points,self.width)

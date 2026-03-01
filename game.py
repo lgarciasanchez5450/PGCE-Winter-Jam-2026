@@ -47,17 +47,30 @@ def main():
     window = pygame.Window()
     
     engine = Engine(window.get_surface())
-    engine.addSystem(Game,'')
-    engine.addSystem(Camera,'',pygame.Vector2())
-    engine.addSystem(Character,'',pygame.Vector2())
-    engine.addSystem(Map,'',VerletPhysics(0,0.2),[])
+    with open('temp','rb') as file:
+        engine_state = EngineState.deserialize(file.read())
+        if engine_state.systems:
+            print('Loading From Save')
+            engine.loadState(engine_state)
+        else:
+            print("Making New")
+            engine.addSystem(Camera,'',pygame.Vector2())
+            # engine.addSystem(Character,'',pygame.Vector2())
+            engine.addSystem(Map,'',)  # pyright: ignore[reportArgumentType]
+            
     engine.Initialize()
     clock = pygame.Clock()
     engine.running = True
     engine.broadcastEvent(EngineEvent.STARTED)
     while engine.running:
-        
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_s]:
+            engine_state = engine.getState()
+            with open('temp','wb') as file:
+                file.write(engine_state.serialize())
+
         engine.Update(pygame.event.get())
+        
         engine.screen.fill('black')
         engine.Draw()
         window.flip()

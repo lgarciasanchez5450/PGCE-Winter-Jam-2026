@@ -122,13 +122,15 @@ class Writer:
     @w(int)
     def writeInt(self,x:int):
         b = bytearray()
+        neg = x < 0
+        if neg: x = -x
         while x:
             v = x&0xFF
             b.append(v|0b10000000)
             x >>= 7
         b.reverse()
         self.buf.extend(b)
-        self.buf.append(0)
+        self.buf.append(neg)
     
     @w(type(None))
     def writeNone(self):
@@ -219,10 +221,13 @@ class Reader:
     @r(int)   
     def readInt(self):
         x = 0
-        while self.i < len(self.buf) and (v:=self.buf[self.i]):
+        v = 0
+        while self.i < len(self.buf) and (v:=self.buf[self.i]) & 0b10000000:
             x <<= 7
             x |= v & 0b01111111
             self.i+=1
+        if v:
+            x = -x
         self.i+=1
         return x
     
@@ -306,3 +311,5 @@ class Reader:
         if typ_typ in rtable: 
             return rtable[typ_typ](self,typ)
         raise NotImplementedError
+
+
