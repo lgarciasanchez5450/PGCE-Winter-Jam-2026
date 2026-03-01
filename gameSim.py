@@ -1,5 +1,7 @@
 import zlib
+import math
 import debug
+
 class Node:
     freeze_time:int
     explosion_time:int
@@ -169,5 +171,12 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
         yield
         
 if __name__ == '__main__':
-    for x in generateInterestingGameStates(5,20,10,15,2,10):
+    nodes = 5
+    edgePercent = 0.45
+
+    edges = int(math.comb(nodes, 2) * edgePercent)
+
+    max_cycle_edges = min(nodes, 3)
+
+    for x in generateInterestingGameStates(5,20,nodes,edges,2,max_cycle_edges):
         input("Press enter to regenerate")
