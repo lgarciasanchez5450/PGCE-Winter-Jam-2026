@@ -122,39 +122,52 @@ def solve(g_state:GameState,tick:int,path:list[int],best_path:list[int],n:int):
                     best_path[:] = path[:tick+length_of_path+1]
     return min_len
 
-state = GameState()
-rng = random.Random(6)
-state.nodes,state.edges = generateGraph(6,6,2,1,rng)
-max_depth = 10
-path = [-1]*(max_depth+1)
-print(state.edges)
-print(state.nodes)
-solutions = []
-variations = 0
-with debug.Timer() as tmr:
-    for start_pos in range(len(state.nodes)):
-        state.start_node = start_pos
-        for end_pos in range(len(state.nodes)):
-            state.end_node = end_pos
-            if start_pos == end_pos: continue
-            for tick in range(min(25,len(state.edges))):
-                state.start_tick = tick
-                path[0] = start_pos
-                best_path = [-1]*(max_depth+1)
-                variations += 1
-                if (len_path:=solve(state,0,path,best_path,max_depth)) != -1:
-                    solutions.append((start_pos,end_pos,tick,best_path.copy()))
-       
+def generateInterestingGameStates(max_depth:int,min_solution_len:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int):
+    master_rng = random.Random()
+    while True:
+        state = GameState()
+        rng = random.Random(hash(str(master_rng.random())))
+        state.nodes,state.edges = generateGraph(n,e,e_cycle_max,max_cycle_edges,rng)
+        path = [-1]*(max_depth+1)
+        solutions = []
+        variations = 0
+        with debug.Timer() as tmr:
+            for start_pos in range(len(state.nodes)):
+                state.start_node = start_pos
+                for end_pos in range(len(state.nodes)):
+                    state.end_node = end_pos
+                    if start_pos == end_pos: continue
+                    for tick in range(min(25,len(state.edges))):
+                        state.start_tick = tick
+                        path[0] = start_pos
+                        best_path = [-1]*(max_depth+1)
+                        variations += 1
+                        if solve(state,0,path,best_path,max_depth) != -1:
+                            solutions.append((start_pos,end_pos,tick,best_path.copy()))
+ 
 
-print(f'{variations=} in {tmr.format()}')                
-solutions.sort(key=lambda x:len(x[3]),reverse=True)
-for start_pos,end_pos,tick,path in solutions[:10]:
-    print('start:',start_pos)
-    print('end:',end_pos)
-    print('tick:',tick)
-    print(path)
-    print('#####################')                
-            
-            
-    
-    
+        print(f'{variations=} in {tmr.format()}')                
+        solutions.sort(key=lambda x:len(x[3]),reverse=True)
+        
+        
+        got:set[tuple[int,int]] = set()
+        unique_start_end_solutions = []
+        for start_pos,end_pos,tick,path in solutions:
+            t = (start_pos,end_pos)
+            if t in got: continue
+            if len(path) < min_solution_len: continue
+            got.add(t)
+            unique_start_end_solutions.append((start_pos,end_pos,tick,path))
+        print(state.nodes)
+        print(state.edges)
+        for start_pos,end_pos,tick,path in unique_start_end_solutions:
+            print('start:',start_pos)
+            print('end:',end_pos)
+            print('tick:',tick)
+            print(path)
+            print('#####################')
+        yield
+        
+if __name__ == '__main__':
+    for x in generateInterestingGameStates(10,3,6,6,4,0):
+        input()
