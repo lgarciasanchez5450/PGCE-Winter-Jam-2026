@@ -45,17 +45,38 @@ class VerletPhysics:
             self.last_pos -= dif
         else:
             self.pos[:] = pos # type: ignore
+            
+    def setPosX(self,x:npt.NDArray[np.floating]|typing.Sequence[float]|float):
+        self.pos[:,0] = x
+    
+    def setPosY(self,y:npt.NDArray[np.floating]|typing.Sequence[float]|float):
+        self.pos[:,1] = y
+
+    def getID(self,ind:typing.SupportsIndex) -> int:
+        return self.ind_to_id[ind]
 
     def setVelocities(self,vel:npt.NDArray[np.floating]):
         self.last_pos[:] = self.pos
-        self.last_pos -= vel * self.dt
+        self.last_pos[:self.size] -= vel * self.dt
 
-    def update(self,accel:npt.NDArray[np.float64]): 
+    def getVels(self):
+        dif = self.pos - self.last_pos
+        dif /= self.dt
+        return  dif[:self.size]
+        
+    def getPoss(self):
+        return self.pos[:self.size]
+    
+    def getIDs(self):
+        return self.ind_to_id[:self.size]
+
+    def update(self,accel:npt.NDArray[np.float64]|None=None): 
         new_positions = 2*self.pos
         new_positions -= self.last_pos
-        new_positions += accel * (self.dt*self.dt)
-        self.pos = new_positions
+        if accel is not None:
+            new_positions[:self.size] += (accel * (self.dt*self.dt))
         self.last_pos = self.pos
+        self.pos = new_positions
 
     def get(self,id:int):
         return self.pos[self.id_to_ind[id]]

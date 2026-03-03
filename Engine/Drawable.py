@@ -101,3 +101,47 @@ class Lines:
     
     def draw(self,surf:Surface):
         pygame.draw.lines(surf,self.color,self.closed,self.points,self.width)
+        
+class Circle:
+    __slots__ = 'color','center','radius','width','draw_top_right','draw_top_left','draw_bottom_left','draw_bottom_right'
+    def __init__(self,
+        color: pygame.typing.ColorLike,
+        center: pygame.typing.Point,
+        radius: float,
+        width: int = 0,
+        draw_top_right: bool = False,
+        draw_top_left: bool = False,
+        draw_bottom_left: bool = False,
+        draw_bottom_right: bool = False
+    ):
+        self.color = color
+        self.center = center
+        self.radius = radius
+        self.width = width
+        self.draw_top_right = draw_top_right
+        self.draw_top_left = draw_top_left
+        self.draw_bottom_left = draw_bottom_left
+        self.draw_bottom_right = draw_bottom_right
+
+    def draw(self,surf:Surface):
+        pygame.draw.circle(surf,self.color,self.center,self.radius,self.width,\
+            self.draw_top_right,self.draw_top_left,self.draw_bottom_left,self.draw_bottom_right)
+        
+class Arc:
+    __slots__ = 'color','rect','start_angle','stop_angle','width'
+    def __init__(self,
+        color:pygame.typing.ColorLike,
+        rect:pygame.typing.RectLike,
+        start_angle:float,
+        stop_angle:float,
+        width:int = 1
+    ):
+        self.color = color
+        self.rect = rect
+        self.start_angle = start_angle
+        self.stop_angle = stop_angle
+        self.width = width
+        
+    
+    def draw(self,surf:Surface):
+        pygame.draw.arc(surf,self.color,self.rect,self.start_angle,self.stop_angle,self.width)

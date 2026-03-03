@@ -68,8 +68,10 @@ def main():
             engine_state = engine.getState()
             with open('temp','wb') as file:
                 file.write(engine_state.serialize())
-
-        engine.Update(pygame.event.get())
+        keys = pygame.key.get_pressed()
+        keysd = pygame.key.get_just_pressed()
+        keysu = pygame.key.get_just_released()
+        engine.Update(pygame.event.get(),keys,keysd,keysu)
         
         engine.screen.fill('black')
         engine.Draw()

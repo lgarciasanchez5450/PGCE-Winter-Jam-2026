@@ -32,7 +32,7 @@ class EngineState:
             writer.writeStr(name)
             writer.writeInt(len(state))
             for item in state:
-                writer.write(type(item))
+                writer.writeType(item)
                 writer.write(item)
         return writer.buf
     
@@ -145,7 +145,10 @@ class Engine:
             system.init()
         self.broadcastEvent(EngineEvent.INITIALIZED)
 
-    def Update(self,events:list[pygame.Event]):
+    def Update(self,events:list[pygame.Event],keys:pygame.key.ScancodeWrapper,keys_down:pygame.key.ScancodeWrapper,keys_up:pygame.key.ScancodeWrapper):
+        self.keys = keys
+        self.keys_down = keys_down
+        self.keys_up = keys_up
         self.events = events
         for system in self.systems:
             try:
@@ -154,9 +157,7 @@ class Engine:
                 raise
                 self.last_exception = err
         for system in self.systems:
-            try:
-                system.draw()
-            except Exception: pass
+            system.draw()
                 # self.last_exception = err
         self.async_ctx.tick()
         
