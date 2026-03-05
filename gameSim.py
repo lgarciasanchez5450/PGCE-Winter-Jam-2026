@@ -5,11 +5,6 @@ import debug
 class Node:
     freeze_time:int
     explosion_time:int
-    def copy(self):
-        out = Node()
-        out.freeze_time = self.freeze_time
-        out.explosion_time = self.explosion_time
-        return out
     
     def __repr__(self):
         return f'N({self.freeze_time}, {self.explosion_time})'
@@ -18,13 +13,6 @@ class Edge:
     a_node:int
     b_node:int
     cycle:list[bool]
-    
-    def copy(self):
-        out = Edge()
-        out.a_node = self.a_node
-        out.b_node = self.b_node
-        out.cycle = self.cycle.copy()
-        return out
     
     def __repr__(self):
         return f'E({self.a_node}, {self.b_node}, {list(map(int,self.cycle))})'
@@ -38,14 +26,6 @@ class GameState:
     def __init__(self):
         self.edges = []
         self.nodes = []
-    
-    def copy(self):
-        out = GameState()
-        out.start_node = self.start_node
-        out.end_node = self.end_node
-        out.nodes = [n.copy() for n in self.nodes]
-        out.edges = [n.copy() for n in self.edges]
-        return out
     
     def __repr__(self):
         return f'''
