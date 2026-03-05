@@ -117,8 +117,6 @@ class Writer:
             a = a[line_width:]
             out = out[line_width:]
 
-
-        
     @w(int)
     def writeInt(self,x:int):
         b = bytearray()
@@ -184,9 +182,15 @@ class Writer:
     def length(self):
         return len(self.buf)
       
-    @w(type)
-    def writeType(self,typ:type):
+    def writeType(self,obj:typing.Any):
+        typ = type(obj)
         self.writeStr(twtable[typ])
+        if typ in (list,set) and len(obj) > 0:
+            self.writeType(next(iter(obj)))
+        elif typ is tuple:
+            self.writeInt(len(obj))
+            for element in obj:
+                self.writeType(element)
             
     def write(self,x:typing.Any):
         typ = type(x)
@@ -296,10 +300,15 @@ class Reader:
             args = args[0]
         return rtable[typ](self,args)
         
-    @r(type)
-    def readType(self):
-        return trtable[self.readStr()]
-
+    def readType(self) -> type:
+        typ = trtable[self.readStr()]
+        if typ in (list,set):
+            otyp = self.readType()
+            return typ[otyp]  # pyright: ignore[reportInvalidTypeArguments]
+        elif typ is tuple:
+            l = self.readInt()
+            return types.GenericAlias(tuple,[self.readType() for _ in range(l)]) # pyright: ignore[reportReturnType]
+        return typ
         
     @property
     def done(self): return self.i >= len(self.buf)

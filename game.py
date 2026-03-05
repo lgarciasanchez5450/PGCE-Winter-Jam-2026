@@ -1,8 +1,6 @@
-from typing import Any
+import sys
 import pygame
 from Engine import *
-from Engine.VerletPhysics import VerletPhysics
-from Scripts.Character import Character
 from Scripts.Map import Map
 from Scripts.Camera import Camera
 from Scripts import SerializeHelper
@@ -43,10 +41,11 @@ class Game(BaseSystem[()]):
 
         
 def main():
-    
     window = pygame.Window()
     
     engine = Engine(window.get_surface())
+    
+    
     with open('temp','rb') as file:
         engine_state = EngineState.deserialize(file.read())
         if engine_state.systems:
@@ -68,15 +67,28 @@ def main():
             engine_state = engine.getState()
             with open('temp','wb') as file:
                 file.write(engine_state.serialize())
-
-        engine.Update(pygame.event.get())
+        if keys[pygame.K_ESCAPE]:
+            engine.running = False
+        keysd = pygame.key.get_just_pressed()
+        keysu = pygame.key.get_just_released()
+        engine.Update(pygame.event.get(),keys,keysd,keysu)
         
         engine.screen.fill('black')
         engine.Draw()
         window.flip()
         engine.dt = clock.tick(60) / 1_000
-        
            
 if __name__ == '__main__':
-    pygame.init()
-    main()
+    if '-t' in sys.argv:
+        import debug
+        import os
+        tracer = debug.Tracer()
+        tracer.outermost_traversal_path = os.path.abspath('..')
+        tracer.traceModule_(sys.modules['__main__'],recurse=True)
+        tracer.traceModule_(pygame,copy_cls=True,locals_only=True)
+        pygame.init()
+        main()
+        tracer.show()
+    else:
+        pygame.init()
+        main()
