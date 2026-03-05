@@ -44,7 +44,7 @@ class AssetManager:
             if ref is not None:
                 return ref
         out = self.loadAsset(path,typ)
-        if type(out) is not typ:
-            raise UnexpectedTypeError
+        if not isinstance(out,typ):
+            raise UnexpectedTypeError(f'Expected Type: {typ} got {type(out)}')
         self.cache[path] = weakref.ReferenceType(out)
         return out

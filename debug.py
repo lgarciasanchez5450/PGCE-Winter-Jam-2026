@@ -1,7 +1,10 @@
 if __name__ == '__main__':
     #We use a lot of introspection that relies on this invariant
     raise RuntimeError('The Debug module cannot be run directly!')
+
+
 import typing
+import types
 import sys
 import math
 import numpy as np
@@ -117,11 +120,12 @@ class Timer:
     def format(self) -> str:
         return fTime(self.time,3,2)
 
+class TracerException(Exception): ...
 
 class Tracer:
     __slots__ = 'i','i2','cur','reset_node','id_to_fqn','raw_trace','__dict__','malloc_id'
     def __init__(self):
-        self.max_can_trace = (2<<16)-1
+        self.max_can_trace = (1<<16)-1
         self.reset_node = None
         self.id_to_fqn:list[str] = []
         self.root_id = self.register_id('__root__')
@@ -138,27 +142,40 @@ class Tracer:
         self.i2 = 0
         self.cur_i = -1
         self.notes_by_uuid:dict[int,str] = {}
+        self.trace_cache:dict[tuple[typing.Callable,str],typing.Callable] = {}
+        self.trace_outs:set[typing.Callable] = set()
+
+        self.do_not_trace:set[typing.Any] = set()
+        
+        self.modules_traced:set[str] = set()
+        self.modules_traced.update(sys.builtin_module_names)
+        self.outermost_traversal_path:None|str = None
 
     def register_id(self,fqn:str):
         if len(self.id_to_fqn) ==  self.max_can_trace: raise RuntimeError(f'Cannot Trace More than {self.max_can_trace} functions')
         self.id_to_fqn.append(sys.intern(fqn))
         return len(self.id_to_fqn) - 1
 
+    def notraceModule(self,module:types.ModuleType):
+        self.modules_traced.add(module.__name__)
 
-    @staticmethod
-    def notrace(func:T_CALLABLE) -> T_CALLABLE:
-        func.__doc__ = 'Tracing Function Wrapper'
+    def notrace(self,func:T_CALLABLE) -> T_CALLABLE:
+        self.do_not_trace.add(func)
         return func
+  
     
-    @notrace
     def trace(self,func:T_CALLABLE, func_name=None,fqn = None) -> T_CALLABLE:
-        if getattr(func,'__doc__',None) == 'Tracing Function Wrapper': return func
+        if func in self.trace_outs: return func
+        # if getattr(func,'__doc__',None) == 'Tracing Function Wrapper': return func
         if not fqn:
             fqn = getattr(func,'__qualname__',func_name or func.__name__)
             module_name = getattr(func,'__module__',None)
             if module_name:
                 fqn = module_name + ':'+ fqn
-
+        
+        if (cached:=self.trace_cache.get((func,fqn))) is not None:
+            return cached  # pyright: ignore[reportReturnType]
+        og_func = func
         fqn_id = self.register_id(fqn)
 
         is_static = type(func) is staticmethod
@@ -190,21 +207,21 @@ class Tracer:
                 raw_trace[i][2] = parent_index
                 __tracer__.cur_i = parent_index
                 raw_trace[i][1] = __tmr__() - start
-                
-        wrapper.__doc__ = 'Tracing Function Wrapper'
+        wrapper.__doc__ = func.__doc__
         wrapper.__name__ = func.__name__
         wrapper.__annotations__ = getattr(func,'__annotations__',None) #type: ignore
+        wrapper.__qualname__ = func.__qualname__
         if is_static:
-            return staticmethod(wrapper) #type: ignore
+            wrapper = staticmethod(wrapper)
         elif is_classm:
-            return classmethod(wrapper) #type: ignore
+            wrapper = classmethod(wrapper) # type: ignore
+        self.trace_cache[(og_func,fqn)] = wrapper
+        self.trace_outs.add(wrapper)
         return wrapper #type: ignore
     
-    @notrace
     def traceas(self,func_name=None,fqn=None):
         return partial(self.trace,func_name=func_name,fqn=fqn)
     
-    @notrace
     def dprint(self,*values,sep:str=' ',end='\n'):
         return print('dprint does not work at this time.')
         s = sep.join([str(v) for v in values]) + end
@@ -213,7 +230,6 @@ class Tracer:
         except AttributeError:
             self.cur.notes = s
     
-    @notrace
     def show(self): #runs a program to see what happened
         import pygame as pg
         print('Function Calls Traced:',self.i2)
@@ -543,7 +559,7 @@ class Tracer:
                     rect = surf2.get_frect(topleft = mpos)
                     rect.clamp_ip(surf.get_rect())
                     pg.draw.rect(surf,'gray',rect,0,2)
-                    surf.blit(surf2,rect)
+                    surf.blit(TraceableClass.ensureObj(surf2),TraceableClass.ensureObj(rect))
                     return True
 
                 x = rect.x
@@ -696,9 +712,9 @@ ALT+ENTER - Accept
                     screen.blit(text,rect)
 
             if not searching and keys[pg.K_TAB]:
-                screen.blit(help_surf,help_surf.get_rect(topright=(screen.width,0)))
+                screen.blit(TraceableClass.ensureObj(help_surf),help_surf.get_rect(topright=(screen.width,0)))
             else:
-                screen.blit(help_hint,help_hint.get_rect(topright=(screen.width,0)))
+                screen.blit(TraceableClass.ensureObj(help_hint),help_hint.get_rect(topright=(screen.width,0)))
 
 
         def pick_menu(frame_indices_picked:set = set()):
@@ -806,52 +822,157 @@ ALT+ENTER - Accept
             WIN.flip()
             clock.tick(fps)
     
-    @notrace
-    def traceClass(self,class_:T_TYPE) -> T_TYPE:
-        for attr_name in dir(class_):
-            if attr_name.startswith('__'): continue
-            attr = class_.__dict__[attr_name]
-            if callable(attr) and type(attr) is not type:
-                setattr(class_,attr_name,self.trace(attr))
+    def traceClass(self,class_:T_TYPE,verbose:bool=False) -> T_TYPE:
+        try:
+            if verbose:
+                print(f'Detected in {class_}:',dir(class_))
+            for attr_name in dir(class_):
+                if attr_name.startswith('__'): continue
+                attr = class_.__dict__[attr_name]
+                if callable(attr) and type(attr) is not type:
+                    setattr(class_,attr_name,self.trace(attr))
+        except Exception as err:
+            raise TracerException(f'Exception Tracing Class: {class_} from {class_.__module__}: {err.args}')
         return class_
     
-    @notrace
-    def traceModule(self,globals_:dict[str,typing.Any],outermost_path:str,do_not_trace:typing.Iterable|None=None,_modules_traced:set|None=None):
-        import sys,os
-        outermost_path = os.path.abspath(outermost_path)
-        if _modules_traced is None: _modules_traced = set()
+    
+    # def traceModule(self,globals_:dict[str,typing.Any],outermost_path:str,do_not_trace:typing.Iterable|None=None,_modules_traced:set|None=None):
+    #     import sys,os
+    #     outermost_path = os.path.abspath(outermost_path)
+    #     if _modules_traced is None: _modules_traced = set()
 
-        builtin_modules = set(sys.builtin_module_names) | set(['os','abc','st','path'])
-        do_not_trace = set(do_not_trace or [])
-        do_not_trace.update([Tracer,sys.modules[__name__],self.trace,self.traceas,self.dprint,self.show,trace,traceas,dprint,show,traceModule],)
-        for key,value in globals_.items():
-            if key.startswith('__'): continue
-            try:
-                if value in do_not_trace: continue
-            except TypeError: pass
-            if type(value) is type(sys): #if its a module
-                pass
-            elif type(value) is type and value is not type: #if its a class
+    #     builtin_modules = set(sys.builtin_module_names) | set(['os','abc','st','path'])
+    #     do_not_trace = set(do_not_trace or [])
+    #     do_not_trace.update([Tracer,sys.modules[__name__],self.trace,self.traceas,self.dprint,self.show,trace,traceas,dprint,show,traceModule],)
+    #     for key,value in globals_.items():
+    #         if key.startswith('__'): continue
+    #         try:
+    #             if value in do_not_trace: continue
+    #         except TypeError: pass
+    #         if type(value) is type(sys): #if its a module
+    #             pass
+    #         elif type(value) is type and value is not type: #if its a class
+    #             try:
+    #                 globals_[key] = self.traceClass(value)
+    #             except Exception: pass
+    #         elif callable(value): #if its a module-wide function
+    #             globals_[key] = self.trace(value)
+
+    #     for module_name,module in sys.modules.items():
+    #         if module in do_not_trace: continue
+    #         if module_name in _modules_traced: continue
+    #         _modules_traced.add(module_name)
+    #         if not (getattr(module,'__file__','') or '').startswith(outermost_path): continue
+    #         if module_name in builtin_modules: continue
+    #         if module_name.startswith('_'): continue
+    #         self.traceModule(module.__dict__,outermost_path,do_not_trace,_modules_traced)
+     
+    def traceModule_(self,module:types.ModuleType,recurse:bool=False,copy_cls:bool=False,locals_only:bool=False,verbose=False):
+        if module.__name__ in self.modules_traced:
+            return
+        self.modules_traced.add(module.__name__)
+        for attr_name,attr_value in module.__dict__.items():
+            if attr_name.startswith('__'): continue
+            if type(attr_value) is types.ModuleType: continue
+            if type(attr_value) is type:
+                if locals_only and not attr_value.__module__.startswith(module.__name__): continue
                 try:
-                    globals_[key] = self.traceClass(value)
-                except Exception: pass
-            elif callable(value): #if its a module-wide function
-                globals_[key] = self.trace(value)
+                    module.__dict__[attr_name] = self.traceClass(attr_value)
+                except TracerException as err: 
+                    if verbose:
+                        print('unable to trace class:',attr_name)
+                        print(err)
+                    if copy_cls:
+                        if verbose:
+                            print("Trying to copy class")
+                        module.__dict__[attr_name] = self.traceClass(TraceableClass(attr_value))
+            elif callable(attr_value) and type(attr_value) is types.FunctionType:
+                if locals_only and attr_value.__module__ != module.__name__: continue
+                try:
+                    module.__dict__[attr_name] = self.trace(attr_value)
+                except:
+                    if verbose:
+                        print('unable to trace function:',attr_name)
 
-        for module_name,module in sys.modules.items():
-            if module in do_not_trace: continue
-            if module_name in _modules_traced: continue
-            _modules_traced.add(module_name)
-            if not (getattr(module,'__file__','') or '').startswith(outermost_path): continue
-            if module_name in builtin_modules: continue
-            if module_name.startswith('_'): continue
-            self.traceModule(module.__dict__,outermost_path,do_not_trace,_modules_traced)
-            
-    @notrace
+        if recurse:
+            for value in module.__dict__.values():
+                if type(value) is types.ModuleType:
+                    if self.outermost_traversal_path and \
+                        hasattr(value,'__path__') and \
+                        not str(value.__path__).startswith(self.outermost_traversal_path): continue
+                    self.traceModule_(value,True,verbose)
+ 
     def reset(self):
         self.reset_node = self.i2
 
 
+
+class TraceableClass(type):
+    def __new__[T:type](cls,class_:T) -> T:
+        namespace = {}
+        for name,object in class_.__dict__.items():
+            if name in ('__new__','__getattribute__'): continue
+            elif callable(object):
+                if type(object) is types.ClassMethodDescriptorType:
+                    @classmethod
+                    def method(cls,*args,__func__=object,__class__=class_,**kwds): # pyright: ignore[reportRedeclaration, reportFunctionMemberAccess]
+                        return __func__(__class__,*args,**kwds)
+                else:
+                    def method(self,*args,__func__=object,**kwargs):
+                        if type(self) is class_:
+                            return __func__(self,*args,**kwargs)
+                        return __func__(self.obj,*args,**kwargs)
+                        
+                method.__qualname__ = f'{class_.__name__}.{name}'
+                namespace[name] = method
+            else:
+                get = getattr(object,'__get__',None)
+                set = getattr(object,'__set__',None)
+                if set and get:
+                    namespace[name] = GetSetDescriptor(lambda o,g=get:g(o.obj),lambda o,v,s=set:s(o.obj,v))
+                elif set:
+                    namespace[name] = GetSetDescriptor(None,lambda o,v,s=set:s(o.obj,v))
+                elif get:
+                    namespace[name] = GetSetDescriptor(lambda o,g=get:g(o.obj),None)
+                else:            
+                    namespace[name] = object
+        namespace['__istraceable__'] = True
+        out = type.__new__(cls,class_.__name__,(),namespace)
+        out.__qualname__ = f'TraceableClass[{class_.__name__}]'  
+        out.class_ = class_
+        return out# pyright: ignore[reportReturnType]
+    def __init__(self,class_):
+        self.class_:type = class_
+    
+    def __instancecheck__(self, instance: typing.Any) -> bool:
+        if type(instance) is self.class_: return True
+        return super().__instancecheck__(instance)
+    
+    def __call__(self, *args: typing.Any, **kwds: typing.Any) -> typing.Any: # should create an instance of 
+        new_class = type(f'T_{self.class_.__name__}',(),self.__dict__.copy())
+        out = new_class.__new__(new_class,*args,**kwds)
+        object.__setattr__(out,'obj',self.class_(*args,**kwds))
+        return out
+    
+    @staticmethod
+    def ensureObj(obj):
+        if getattr(obj,'__istraceable__',False):
+            return obj.obj
+        return obj
+    
+    
+class GetSetDescriptor:
+    def __init__(self,get:typing.Callable|None,set:typing.Callable|None):
+        self.get = get
+        self.set = set
+    def __get__(self, obj, objtype=None):
+        if self.get:
+            return self.get(obj)
+    def __set__(self, obj, value):
+        if self.set:
+            return self.set(obj,value)
+    
+        
 def fTime(t:float,l:int,n:int):
     #The length of this string will be at least l + 3 [+ n + 1] minus the part in brackets if n == 0
     if t:
@@ -901,7 +1022,7 @@ def profile(func=None,show_args=False):
         return v
     _.__name__ = func.__name__
     return _
-        
+
 def profileResursive(func=None,show_args=False):
     if func is None:
         return partial(profileResursive,show_args=show_args)
@@ -926,12 +1047,12 @@ def profileResursive(func=None,show_args=False):
 
 
 
-TRACER = Tracer()
-#Module-wide aliases to simplify use
-def trace(func): return TRACER.trace(func)
-def traceas(func_name=None,fqn=None):return TRACER.traceas(func_name,fqn)
-def show(): return TRACER.show()
-def dprint(*values,sep=' ',end='\n'): return TRACER.dprint(*values,sep=sep,end=end)
-def traceClass(class_:T_TYPE) -> T_TYPE: return TRACER.traceClass(class_)
-def traceModule(globals_:dict,outermost_path): return TRACER.traceModule(globals_,outermost_path)
-def reset(): return TRACER.reset()
+# TRACER = Tracer()
+# #Module-wide aliases to simplify use
+# def trace(func): return TRACER.trace(func)
+# def traceas(func_name=None,fqn=None):return TRACER.traceas(func_name,fqn)
+# def show(): return TRACER.show()
+# def dprint(*values,sep=' ',end='\n'): return TRACER.dprint(*values,sep=sep,end=end)
+# def traceClass(class_:T_TYPE) -> T_TYPE: return TRACER.traceClass(class_)
+# # def traceModule(globals_:dict,outermost_path): return TRACER.traceModule(globals_,outermost_path)
+# def reset(): return TRACER.reset()

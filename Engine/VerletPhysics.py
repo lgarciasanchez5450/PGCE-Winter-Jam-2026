@@ -7,6 +7,7 @@ import numpy.typing as npt
 
 Vec2_NPCompat = tuple[float|np.floating,float|np.floating]|npt.NDArray[np.floating]
 
+
 def serializeNDArray(writer:Writer,arr:np.ndarray):
     writer.write([int(s) for s in arr.shape])
     writer.writeStr(str(arr.dtype))
@@ -55,9 +56,9 @@ class VerletPhysics:
     def getID(self,ind:typing.SupportsIndex) -> int:
         return self.ind_to_id[ind]
 
-    def setVelocities(self,vel:npt.NDArray[np.floating]):
+    def setVelocities(self,vel:Vec2_NPCompat):
         self.last_pos[:] = self.pos
-        self.last_pos[:self.size] -= vel * self.dt
+        self.last_pos[:self.size] -= np.asarray(vel) * self.dt
 
     def getVels(self):
         dif = self.pos - self.last_pos
@@ -66,6 +67,12 @@ class VerletPhysics:
         
     def getPoss(self):
         return self.pos[:self.size]
+    
+    def getInd(self,id:int):
+        return self.id_to_ind[id]
+    
+    def getInds(self,ids:npt.NDArray[np.intp]):
+        return self.id_to_ind[ids]
     
     def getIDs(self):
         return self.ind_to_id[:self.size]
@@ -83,6 +90,13 @@ class VerletPhysics:
     
     def gets(self,ids:typing.Sequence[int]|npt.NDArray[np.integer]):
         return self.pos[self.id_to_ind[ids]]
+
+    def getTotalEnergy(self):
+        e = self.getVels() * self.getVels()
+        e /= 2
+        return e
+        
+        
 
     def remove(self,id:int):
         self.size -= 1

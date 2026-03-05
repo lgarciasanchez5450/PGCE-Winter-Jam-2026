@@ -83,6 +83,8 @@ class Map(BaseSystem[GameState,int,list[int]]):
             x = r * math.cos(theta)
             y = r * math.sin(theta)
             self.world.append((x,y),(0,0))
+            
+        self.sim_cpu_time = 0
         
 
     def getState(self):
@@ -137,6 +139,42 @@ class Map(BaseSystem[GameState,int,list[int]]):
 
     def onStart(self):
         pass
+    
+    def stepSim(self):
+        accel = np.zeros((self.world.size,2))
+        spring_k = 0.9
+        for edge in self.gs.edges:
+            a_node_i = self.world.getInd(edge.a_node)
+            b_node_i = self.world.getInd(edge.b_node)
+            
+            dif = self.world.pos[a_node_i] - self.world.pos[b_node_i]
+            
+            length = np.sqrt(np.sum(dif*dif))
+            norm = dif / length
+            accel[a_node_i] -= norm * length * spring_k
+            accel[b_node_i] += norm * length * spring_k
+        
+        for i in range(self.world.size):
+            difs = self.world.pos[i] - self.world.getPoss()
+            
+            dists = np.sqrt(np.sum(difs*difs,axis=1))
+            f_mags = 200 / (1+(dists/30))
+            norms = (difs / dists[:,np.newaxis])
+            # print(norms.shape)
+            norms[np.logical_not(np.isfinite(norms))] = 0
+            accel -= norms * f_mags[:,np.newaxis]
+            
+            # for j in range(i+1,self.world.size,1):
+            #     dif = self.world.pos[i] - self.world.pos[j]
+            #     distance = np.sqrt(np.sum(dif*dif))
+            #     #convert distance to magnitude of force 
+            #     f_mag = 200 / (1+distance/30)
+            #     norm = dif / distance
+            #     accel[i] += norm * f_mag
+            #     accel[j] -= norm * f_mag
+        accel -= self.world.getVels() * 2
+        self.world.update(accel)
+        
 
     def update(self):
         # self.sim_time_left -= self.world.dt
@@ -158,37 +196,9 @@ class Map(BaseSystem[GameState,int,list[int]]):
             print(self.connections)
         if keysd[pygame.K_o]:
             print('ID Order:',self.id_order)
-        target_len = 0
-        # self.time += self.engine.dt
-        accel = np.zeros((self.world.size,2))
-        for edge in self.gs.edges:
-            a_node = edge.a_node
-            b_node = edge.b_node
-            a_pos = self.world.get(a_node)
-            b_pos = self.world.get(b_node)
-            dif = a_pos - b_pos
-            
-            length = np.sqrt(np.sum(dif*dif))
-            norm = dif / length
-            length -= target_len
-            accel[self.world.id_to_ind[a_node]] -= norm * length
-            accel[self.world.id_to_ind[b_node]] += norm * length
-        
-        for i in range(self.world.size):
-            for j in range(i+1,self.world.size,1):
-                dif = self.world.pos[i] - self.world.pos[j]
-                distance = np.sqrt(np.sum(dif*dif))
-                #convert distance to magnitude of force 
-                f_mag = 200 / (1+distance/30)
-                norm = dif / distance
-                accel[i] += norm * f_mag
-                accel[j] -= norm * f_mag
-        
-        accel -= self.world.getVels() * 2
-        # print('Average Pos:',*[f'{x:+.8f}' for x in np.sum(self.world.getPoss(),axis=0)],end=' ')
-        # print('Average Vel:',*[f'{x:+.8f}' for x in np.sum(self.world.getVels(),axis=0)],end=' ')
-        # print('Average Acc:',*[f'{x:+.8f}' for x in np.sum(accel,axis=0)])
-        self.world.update(accel)
+        with debug.Timer() as tmr:
+            self.stepSim()
+        self.sim_cpu_time += tmr.time
 
     def draw(self):
         try:

@@ -12,6 +12,12 @@ class Text:
         self.text = ''
         self.cache = None
         
+    def setFont(self,font:pygame.Font):
+        if self.cache and self.font == font: return self
+        self.font = font
+        self.cache = None
+        return self
+        
     def setText(self,text:str):
         if self.cache and self.text == text: return self
         self.text = text
@@ -57,24 +63,29 @@ class Mapping[K]:
         self.cache:dict[K,pygame.Surface] = {}
         self.coerce = coerce
         
+    def setFont(self,font:pygame.Font):
+        self._text.setFont(font)
+        if self._text.cache is None: self.cache.clear()
+        return self
+        
     def setAA(self,aa:bool):
         self._text.setAA(aa)
-        self.cache.clear()
+        if self._text.cache is None: self.cache.clear()
         return self
     
     def setColor(self,color:pygame.typing.ColorLike):
         self._text.setColor(color)
-        self.cache.clear()
+        if self._text.cache is None: self.cache.clear()
         return self
 
     def setBGColor(self,bgcolor:pygame.typing.ColorLike):
         self._text.setBGColor(bgcolor)
-        self.cache.clear()
+        if self._text.cache is None: self.cache.clear()
         return self
 
     def setWraplength(self,wraplength:int):        
         self._text.setWraplength(wraplength)
-        self.cache.clear()
+        if self._text.cache is None: self.cache.clear()
         return self
 
     def get(self,k:K) -> pygame.Surface:

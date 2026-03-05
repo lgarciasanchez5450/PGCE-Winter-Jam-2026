@@ -62,7 +62,6 @@ class EngineState:
         e_state.systems = systems
         return e_state
 
-
 class Engine:
     systems:list[BaseSystem]
     layers:defaultdict[int,list[Drawable]]
@@ -74,17 +73,14 @@ class Engine:
         self.systems = []
         self.layers = defaultdict(list)
         self.dt = 0
-        # self.window_clear_color:pygame.typing.ColorLike|None = None
         self.assetManager = AssetManager()
         self.async_ctx = Async.Context()
         
         self.last_exception:typing.Optional[BaseException] = None
         
-        
     def draw(self,drawable:Drawable,layer:int=0):
         self.layers[layer].append(drawable)
-           
-           
+
     def getSystem[TBS:BaseSystem](self,type_:type[TBS],name:str|None=None) -> TBS:
         for system in self.systems:
             if type(system) is not type_:
@@ -151,14 +147,9 @@ class Engine:
         self.keys_up = keys_up
         self.events = events
         for system in self.systems:
-            try:
-                system.update()
-            except Exception as err:
-                raise
-                self.last_exception = err
+            system.update()
         for system in self.systems:
             system.draw()
-                # self.last_exception = err
         self.async_ctx.tick()
         
     def Draw(self):
@@ -169,3 +160,5 @@ class Engine:
 
     def SetViewport(self,viewport:pygame.Surface):
         self.screen = viewport
+        
+        
