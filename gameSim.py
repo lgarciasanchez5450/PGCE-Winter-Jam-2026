@@ -80,36 +80,35 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
             edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
 
         edges.append(edge)
-        
     return nodes,edges
-  
 
-def solve(g_state:GameState,tick:int,path:list[int],best_path:list[int],n:int):
-    cur_pos = path[tick]
+
+def solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n:int):
+    cur_pos = path[i]
     if cur_pos == g_state.end_node: return 0
-    if tick+1 > len(best_path): return -1
+    if i+1 > len(best_path): return -1
     if n <= 0: return -1
     cur_node = g_state.nodes[cur_pos]
     if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
         return -1
     min_len=-1
+    tick +=  cur_node.freeze_time
     for edge in g_state.edges:
         if not edge.cycle[(g_state.start_tick + tick)%len(edge.cycle)]: continue
         go = False
         if cur_pos == edge.a_node:
-            path[tick+1] = edge.b_node
+            path[i+1] = edge.b_node
             go = True
         elif cur_pos == edge.b_node:
-            path[tick+1] = edge.a_node
+            path[i+1] = edge.a_node
             go = True
         if go:
-            length_of_path = solve(g_state,tick+1,path,best_path,n-1) + 1
+            length_of_path = solve(g_state,tick+1,i+1,path,best_path,n-1) + 1
             if length_of_path:
                 min_len = length_of_path
-                if tick+length_of_path+1 < len(best_path):
-                    best_path[:] = path[:tick+length_of_path+1]
+                if i+length_of_path+1 < len(best_path):
+                    best_path[:] = path[:i+length_of_path+1]
     return min_len
-
 
 def solutionUsesAllCycles(g_state:GameState,path:list[int]):
     # for each edge that cycles, the solution must include that pair of nodes as adjacent numbers (in any order)
@@ -150,7 +149,7 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
                         path[0] = start_pos
                         best_path = [-1]*(max_depth+1)
                         variations += 1
-                        if solve(state,0,path,best_path,max_depth) != -1:
+                        if solve(state,0,0,path,best_path,max_depth) != -1:
                             solutions.append((start_pos,end_pos,tick,best_path.copy()))
 
         print(f'{variations=} in {tmr.format()}')                
