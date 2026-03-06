@@ -47,7 +47,12 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
     teleportNodes:list[Node] = []
     for i in range(n):
         node = Node()
-        typeOfNode = rng.randint(0,2)
+        
+        if i < 2:
+            typeOfNode = 2
+        else:
+            typeOfNode = rng.randint(0,2)
+
         if typeOfNode == 0:
             node.freeze_time = 0
             node.explosion_time = rng.randint(2,e)
@@ -61,29 +66,14 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
             node.explosion_time = -1
             node.teleport_to = -1
 
-            if len(teleportNodes) < n - 2: # We require a non-teleport start and end node otherwise the puzzle is cooked
-                
+            if len(teleportNodes) < 2: # We require a non-teleport start and end node otherwise the puzzle is cooked
                 # node can't teleport to itself
                 nodeToTeleportTo = rng.randint(0,n-1)
                 while i == nodeToTeleportTo:
                     nodeToTeleportTo = rng.randint(0,n-1)
 
-                # then, node can't have created a teleport loop in existing (if so don't let it be a teleport node)
-                goodToGo = True
-                if len(nodes) > nodeToTeleportTo:
-                    currNode = nodes[nodeToTeleportTo]
-                    teleports = 1
-                    while currNode in teleportNodes and teleports < len(teleportNodes) + 1:
-                        if len(nodes) <= currNode.teleport_to:
-                            break
-                        currNode = nodes[currNode.teleport_to]
-                        teleports += 1
-
-                    goodToGo = teleports < len(teleportNodes) + 1
-
-                if goodToGo:
-                    node.teleport_to = nodeToTeleportTo
-                    teleportNodes.append(node)
+                node.teleport_to = nodeToTeleportTo
+                teleportNodes.append(node)
 
         nodes.append(node)
 
