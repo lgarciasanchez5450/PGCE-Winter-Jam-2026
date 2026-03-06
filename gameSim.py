@@ -46,7 +46,7 @@ def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Ran
     for i in range(n):
         node = Node()
         if rng.randint(0,1):
-            node.freeze_time = -1
+            node.freeze_time = 0
             node.explosion_time = rng.randint(2,e)
         else:
             node.freeze_time = rng.randint(0,e)
@@ -180,14 +180,14 @@ def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int
             yield state, unique_start_end_solutions[0]
         
 if __name__ == '__main__':
-    nodes = 6
+    nodes = 5
     edgePercent = 0.52
 
-    edges = int(math.comb(nodes, 2) * edgePercent)
+    edges = max(int(math.comb(nodes, 2) * edgePercent), nodes-1)
 
     max_cycle_edges = min(nodes, 3)
 
-    for x in generateInterestingGameStates(5,20,nodes,edges,2,max_cycle_edges,True):
+    for x in generateInterestingGameStates(1,20,nodes,edges,2,max_cycle_edges,True):
         input("Press enter to regenerate")
 
 # make generateInterestingGameStates yield gamestate and path 
