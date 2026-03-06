@@ -31,12 +31,8 @@ class VerletPhysics:
     __slots__ = 'dt','capacity','size', 'pos','last_pos','id_to_ind','ind_to_id'
     def __init__(self,particles:int,dt:float):
         self.dt = dt
-        self.capacity = particles
         self.size = particles
-        self.pos = np.empty((self.capacity,2),np.float64) #sync dtypes to .deserialize method
-        self.last_pos = np.empty((self.capacity,2),np.float64)
-        self.id_to_ind = np.arange(self.capacity,dtype=np.intp)
-        self.ind_to_id = np.arange(self.capacity,dtype=np.intp)
+        self.clear(particles)
         
     def setPositions(self,pos:npt.NDArray[np.floating]|typing.Sequence[typing.Iterable[float]],sync_vel:bool=False):
         if sync_vel:
@@ -95,8 +91,6 @@ class VerletPhysics:
         e = self.getVels() * self.getVels()
         e /= 2
         return e
-        
-        
 
     def remove(self,id:int):
         self.size -= 1
@@ -114,6 +108,15 @@ class VerletPhysics:
         
         self.id_to_ind[id_of_last] = i
         self.id_to_ind[id_of_removed] = i_last
+    
+    def clear(self,capacity:int=0):
+        self.size = 0
+        self.capacity = capacity
+        self.pos = np.empty((self.capacity,2),np.float64) #sync dtypes to .deserialize method
+        self.last_pos = np.empty((self.capacity,2),np.float64)
+        self.id_to_ind = np.arange(self.capacity,dtype=np.intp)
+        self.ind_to_id = np.arange(self.capacity,dtype=np.intp)
+
 
     def append(self,pos:Vec2_NPCompat,vel:Vec2_NPCompat) -> int:
         index = self.size

@@ -62,6 +62,7 @@ class EngineState:
         e_state.systems = systems
         return e_state
 
+
 class Engine:
     systems:list[BaseSystem]
     layers:defaultdict[int,list[Drawable]]
@@ -111,14 +112,16 @@ class Engine:
     def checkCoroutine(self,coro:typing.Generator|typing.Awaitable):
         return self.async_ctx.isAlive(coro) # pyright: ignore[reportArgumentType]
 
+    def addSystemToState[*TT](self,state:EngineState,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
+        if not isSerializeable(args):
+            raise RuntimeError(f'Serialization Error: System \'{typ.__name__}\' returned an unserializable state: {repr(args)}')
+        state.systems.append((str(typ._fqn),str(name),args))
+
     def getState(self) -> EngineState:
         e_state = EngineState()
         e_state.systems = []
         for system in self.systems:
-            state = system.getState()
-            if not isSerializeable(state):
-                raise RuntimeError(f'Serialization Error: System \'{type(system).__name__}\' returned an unserializable state: {repr(state)}')
-            e_state.systems.append((str(system._fqn),str(system.name),state))
+            self.addSystemToState(e_state,type(system),system.name,system.getState())
         return e_state
     
     def loadState(self,state:EngineState):
