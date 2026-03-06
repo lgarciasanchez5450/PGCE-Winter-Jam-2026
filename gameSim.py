@@ -5,9 +5,10 @@ import debug
 class Node:
     freeze_time:int
     explosion_time:int
+    teleport_to:int
     
     def __repr__(self):
-        return f'N({self.freeze_time}, {self.explosion_time})'
+        return f'N(FR:{self.freeze_time}, EX:{self.explosion_time}, TE:{self.teleport_to})'
     
 class Edge:
     a_node:int
@@ -42,16 +43,48 @@ import random
 @debug.profile
 def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Random) -> tuple[list[Node],list[Edge]]:
     if e<n-1: print('Bad!');raise Exception
-    nodes = []
+    nodes:list[Node] = []
+    teleportNodes:list[Node] = []
     for i in range(n):
         node = Node()
-        if rng.randint(0,1):
+        typeOfNode = rng.randint(0,2)
+        if typeOfNode == 0:
             node.freeze_time = 0
             node.explosion_time = rng.randint(2,e)
-        else:
+            node.teleport_to = -1
+        elif typeOfNode == 1:
             node.freeze_time = rng.randint(0,e)
             node.explosion_time = -1
-            
+            node.teleport_to = -1
+        else:
+            node.freeze_time = 0
+            node.explosion_time = -1
+            node.teleport_to = -1
+
+            if len(teleportNodes) < n - 2: # We require a non-teleport start and end node otherwise the puzzle is cooked
+                
+                # node can't teleport to itself
+                nodeToTeleportTo = rng.randint(0,n-1)
+                while i == nodeToTeleportTo:
+                    nodeToTeleportTo = rng.randint(0,n-1)
+
+                # then, node can't have created a teleport loop in existing (if so don't let it be a teleport node)
+                goodToGo = True
+                if len(nodes) > nodeToTeleportTo:
+                    currNode = nodes[nodeToTeleportTo]
+                    teleports = 1
+                    while currNode in teleportNodes and teleports < len(teleportNodes) + 1:
+                        if len(nodes) <= currNode.teleport_to:
+                            break
+                        currNode = nodes[currNode.teleport_to]
+                        teleports += 1
+
+                    goodToGo = teleports < len(teleportNodes) + 1
+
+                if goodToGo:
+                    node.teleport_to = nodeToTeleportTo
+                    teleportNodes.append(node)
+
         nodes.append(node)
 
     connected:set[tuple[int,int]] = set()
@@ -89,8 +122,15 @@ def solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n:
     if i+1 > len(best_path): return -1
     if n <= 0: return -1
     cur_node = g_state.nodes[cur_pos]
+
     if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
-        return -1
+            return -1
+    
+    while cur_node.teleport_to != -1:
+        cur_node = g_state.nodes[cur_node.teleport_to]        
+        if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
+            return -1 
+
     min_len=-1
     tick +=  cur_node.freeze_time
     for edge in g_state.edges:
@@ -187,7 +227,7 @@ if __name__ == '__main__':
 
     max_cycle_edges = min(nodes, 3)
 
-    for x in generateInterestingGameStates(1,20,nodes,edges,2,max_cycle_edges,True):
+    for x in generateInterestingGameStates(3,10,nodes,edges,2,max_cycle_edges,False):
         input("Press enter to regenerate")
 
 # make generateInterestingGameStates yield gamestate and path 
