@@ -2,6 +2,7 @@ from Engine import *
 from Scripts.Camera import Camera
 from Scripts.MapDrawer import MapDrawer
 from gameSim import GameState
+import numpy as np
 
 class Level(BaseSystem[GameState]):
     def getState(self) -> tuple[GameState]:
@@ -22,7 +23,7 @@ class Level(BaseSystem[GameState]):
     
     def draw(self):
         camera_offset = self.camera.offset
-        character_pos = self.map.getPos(self.character_node)
+        character_pos = np.floor(self.map.getPos(self.character_node))
         
         self.engine.draw(
             Drawable.Rect('blue',pygame.Rect(0,0,20,20).move_to(center=character_pos).move(camera_offset),width=3),layer=3
