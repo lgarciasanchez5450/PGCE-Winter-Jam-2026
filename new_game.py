@@ -5,7 +5,7 @@ from Scripts.Camera import Camera
 from Scripts.MapDrawer import MapDrawer
 from Scripts.Level import LevelSystem
 from Scripts.GameData import GameData
-from gameSim import generateInterestingGameStates
+from gameSim import defaultGameStateParameters, generateInterestingGameStates
 from Scripts import SerializeHelper
 from Engine import *
 if __name__ == '__main__':
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     level_scene = EngineState.empty()
     engine.addSystemToState(level_scene,Camera,'',False,pygame.Vector2())
     engine.addSystemToState(level_scene,MapDrawer,'',False,[],[])
-    engine.addSystemToState(level_scene,LevelSystem,'',False,next(generateInterestingGameStates(1,10,5,7,2,3,False))[0])
+    engine.addSystemToState(level_scene,LevelSystem,'',False,next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
     engine.addScene('level',level_scene)
 
     

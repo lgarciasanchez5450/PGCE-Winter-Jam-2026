@@ -115,6 +115,6 @@ class LevelSystem(BaseSystem[GameState]):
             if node == self.character_node: continue
             edge = self.connection(self.character_node,node)
             if edge is None: continue
-            if not edge.cycle[(self.tick+self.gamestate.start_tick)%len(edge.cycle)]: continue
+            if not edge.cycle[(self.tick)%len(edge.cycle)]: continue
             out.append(node)
         return out

@@ -1,16 +1,13 @@
 from Engine import *
 
-from gameSim import GameState,generateInterestingGameStates
-
-
-    
+from gameSim import GameState, defaultGameStateParameters, generateInterestingGameStates
 
 class Level:
     game_state:GameState
     completed:bool
 
 class GameData(BaseSystem[()]):
-    
+
     def getState(self) -> tuple[()]:
         return ()
     
@@ -18,7 +15,7 @@ class GameData(BaseSystem[()]):
         self.volume = 1
         self.levels:list[Level] = []
         
-        gen = generateInterestingGameStates(3,4,4,4,2,2,False)
+        gen = generateInterestingGameStates(2, defaultGameStateParameters)
         LEVELS = 30
         for _ in range(LEVELS):
             level = Level()

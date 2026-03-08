@@ -6,6 +6,11 @@ class Node:
     freeze_time:int
     explosion_time:int
     teleport_to:int
+
+    def __init__(self):
+        self.freeze_time = 0
+        self.explosion_time = -1
+        self.teleport_to = -1
     
     def __repr__(self):
         return f'N(FR:{self.freeze_time}, EX:{self.explosion_time}, TE:{self.teleport_to})'
@@ -14,97 +19,196 @@ class Edge:
     a_node:int
     b_node:int
     cycle:list[bool]
+
+    def __init__(self, a_node=-1, b_node=-1, cycle=[True]):
+        self.a_node = a_node
+        self.b_node = b_node
+        self.cycle = cycle
     
     def __repr__(self):
         return f'E({self.a_node}, {self.b_node}, {list(map(int,self.cycle))})'
     
 class GameState:
-    start_node:int
-    end_node:int
     nodes:list[Node]
     edges:list[Edge]
-    start_tick:int
+
+    @property
+    def start_node(self):
+        return 0
+    
+    @property
+    def end_node(self):
+        return len(self.nodes) - 1
+
     def __init__(self):
         self.edges = []
         self.nodes = []
     
     def __repr__(self):
         return f'''
-start:{self.start_node}
-end:{self.end_node}
-nodes:{[f'{i}:{n}' for i,n in enumerate(self.nodes)]}
-edges:{self.edges}
-tick:{self.start_tick}    
-    '''
-    
-    
+            start:{self.start_node}
+            end:{self.end_node}
+            nodes:{[f'{i}:{n}' for i,n in enumerate(self.nodes)]}
+            edges:{self.edges}   
+                '''
+
+class GameStateGenerationParameters:
+    N_NODE = 0
+    FR_NODE = 1
+    EX_NODE = 2
+    TP_NODE = 3
+    N_EDGE = 4
+    C_EDGE = 5
+
+    @property
+    def total_nodes(self):
+        return sum(self.node_amounts_remaining.values())
+
+    node_amounts_remaining:dict[int, int]
+    edge_amounts_remaining:dict[int, int]
+
+    branch_chance:float
+
+def defaultGameStateParameters() -> GameStateGenerationParameters:
+    game_state_paramters: GameStateGenerationParameters = GameStateGenerationParameters()
+    game_state_paramters.node_amounts_remaining = {GameStateGenerationParameters.FR_NODE: 3,
+                                                    GameStateGenerationParameters.EX_NODE: 2,
+                                                    GameStateGenerationParameters.TP_NODE: 1,
+                                                    GameStateGenerationParameters.N_NODE: 2}
+    game_state_paramters.edge_amounts_remaining = {GameStateGenerationParameters.C_EDGE: 3,
+                                                   GameStateGenerationParameters.N_EDGE: 3}
+    game_state_paramters.branch_chance = 0.5
+    return game_state_paramters
+
 import random
+def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
+    solvable_game_state = GameState()
 
-@debug.profile
-def generateGraph(n:int,e:int,e_cycle_max:int,max_cycle_edges:int,rng:random.Random) -> tuple[list[Node],list[Edge]]:
-    if e<n-1: print('Bad!');raise Exception
-    nodes:list[Node] = []
-    teleportNodes:list[Node] = []
-    for i in range(n):
-        node = Node()
+    def isRemainingDictEmpty(remaining:dict):
+        return not any(remaining.values())
+
+    def chooseRemainingType(remaining:dict) -> int:
+        if isRemainingDictEmpty(remaining):
+            return -1
+
+        chosenType = random.choice(list(remaining.keys()))
+        while remaining[chosenType] == 0:
+            chosenType = random.choice(list(remaining.keys()))
+
+        remaining[chosenType] -= 1
+        return chosenType
+    
+    def isValidNodePos(pos:int):
+        return pos < len(solvable_game_state.nodes)
+    
+    def doesEdgeAlreadyExist(a_node_pos:int, b_node_pos:int):
+        if a_node_pos > b_node_pos:
+            a_node_pos, b_node_pos = b_node_pos, a_node_pos
+
+        for edge in solvable_game_state.edges:
+            if edge.a_node == a_node_pos and edge.b_node == b_node_pos:
+                return True
+        return False
+    
+    def generateEdgeBetween(a_node_pos:int, b_node_pos:int, tick:int, useEdge=True):
+        new_edge = Edge()
+
+        if a_node_pos > b_node_pos:
+            a_node_pos, b_node_pos = b_node_pos, a_node_pos
+
+        new_edge.a_node = a_node_pos
+        new_edge.b_node = b_node_pos
+
+        if useEdge:
+            new_edge_type = chooseRemainingType(p.edge_amounts_remaining)
+        else:
+            new_edge_type = GameStateGenerationParameters.N_EDGE
+
+        if new_edge_type == GameStateGenerationParameters.C_EDGE:
+            new_edge.cycle = [False, False]
+            new_edge.cycle[tick % 2] = True
+        else:
+            new_edge.cycle = [True]
+
+        solvable_game_state.edges.append(new_edge)
+
+    def step_once(tick:int,prev_pos:int,curr_pos:int) -> None:
+        print("\n\nA NEW CALL TO STEP_ONCE IS STARTING!")
+
+        if not isValidNodePos(prev_pos):
+            print("MAKING NEW NODE!")
+            new_node:Node = Node()
+            new_node_type = chooseRemainingType(p.node_amounts_remaining)
+
+            if new_node_type == GameStateGenerationParameters.FR_NODE:
+                new_node.freeze_time = 1
+                tick += 1
+            elif new_node_type == GameStateGenerationParameters.EX_NODE:
+                new_node.explosion_time = tick + 1
+            elif new_node_type == GameStateGenerationParameters.TP_NODE:
+                new_node.teleport_to = curr_pos
+
+            solvable_game_state.nodes.append(new_node)
+
+        if isRemainingDictEmpty(p.edge_amounts_remaining):
+            print("PATH ENDED FOR LACK OF EDGES")
+            return
         
-        if i < 2:
-            typeOfNode = 2
+        if isRemainingDictEmpty(p.node_amounts_remaining): #probably gonna backfire when you can backtrack
+            print("PATH ENDED FOR LACK OF NODES")
+            return
+    
+        if solvable_game_state.nodes[prev_pos].teleport_to != curr_pos and not doesEdgeAlreadyExist(prev_pos,curr_pos):
+            generateEdgeBetween(prev_pos,curr_pos,tick)
+        
+        if isValidNodePos(curr_pos):
+            curr_node = solvable_game_state.nodes[curr_pos]
+            
+            tick += curr_node.freeze_time
+
+            attempts_at_finding_non_teleporting_node = 1
+            while curr_node.teleport_to != -1: # beware of infinite tp-node loops
+                if attempts_at_finding_non_teleporting_node == len(solvable_game_state.nodes):
+                    generateEdgeBetween(curr_pos,curr_node.teleport_to,tick) # TICK MIGHT NEED TO BE +1 or -1 here
+                    curr_node.teleport_to = -1
+                    print("STEPPING HERE 4")
+                    step_once(tick,curr_pos,len(solvable_game_state.nodes)) #TICK IS NOT +1 HERE ON PURPOSE!!
+                    print("EXITING HERE 3")
+                    return
+                curr_pos = curr_node.teleport_to
+                curr_node = solvable_game_state.nodes[curr_pos]
+                
+                attempts_at_finding_non_teleporting_node += 1
+
+        # print(f'{p.node_amounts_remaining=}')
+        # print(f'{p.edge_amounts_remaining=}')
+
+        print("step_once called for tick:",tick)
+        print(f'{prev_pos=}')
+        print(f'{curr_pos=}')
+
+        if isValidNodePos(curr_pos):
+            print("BRANCHING FROM VALID POS")
+            step_once(tick+1,curr_pos,len(solvable_game_state.nodes))
+        elif random.random() < p.branch_chance:
+            print("BRANCHING FROM NOT VALID POS")
+            step_once(tick+1,curr_pos,len(solvable_game_state.nodes)+1)
         else:
-            typeOfNode = rng.randint(0,2)
+            print("NOT BRANCHING")
+            next_pos = random.randint(0,len(solvable_game_state.nodes)-1)
+            attempts_at_finding_non_exploding_node = 1
+            while solvable_game_state.nodes[next_pos].explosion_time != -1 and next_pos != curr_pos:
+                if attempts_at_finding_non_exploding_node == len(solvable_game_state.nodes):
+                    step_once(tick+1,curr_pos,len(solvable_game_state.nodes)+1)
+                    return
+                next_pos = random.randint(0,len(solvable_game_state.nodes)-1)
+                attempts_at_finding_non_exploding_node += 1
+            
+            print("STEPPING HERE 3")
+            step_once(tick+1,curr_pos,next_pos)
 
-        if typeOfNode == 0:
-            node.freeze_time = 0
-            node.explosion_time = rng.randint(2,e)
-            node.teleport_to = -1
-        elif typeOfNode == 1:
-            node.freeze_time = rng.randint(0,e)
-            node.explosion_time = -1
-            node.teleport_to = -1
-        else:
-            node.freeze_time = 0
-            node.explosion_time = -1
-            node.teleport_to = -1
-
-            if len(teleportNodes) < 2: # We require a non-teleport start and end node otherwise the puzzle is cooked
-                # node can't teleport to itself
-                nodeToTeleportTo = rng.randint(0,n-1)
-                while i == nodeToTeleportTo:
-                    nodeToTeleportTo = rng.randint(0,n-1)
-
-                node.teleport_to = nodeToTeleportTo
-                teleportNodes.append(node)
-
-        nodes.append(node)
-
-    connected:set[tuple[int,int]] = set()
-    edges = []
-    for i in range(e):
-        while True:
-            a = rng.randint(0,n-1)
-            b = rng.randint(0,n-1)
-            while b == a:
-                b = rng.randint(0,n-1)
-            if b<a:
-                a,b = b,a
-            if (a,b) not in connected:
-                connected.add((a,b))
-                break
-        edge = Edge()
-        edge.a_node = a
-        edge.b_node = b
-
-        if i < max_cycle_edges:
-            edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
-        else:
-            edge.cycle = [True]
-
-        while not any(edge.cycle) or (all(edge.cycle) and len(edge.cycle) > 1):
-            edge.cycle = [rng.random() < 0.5 for _ in range(e_cycle_max)]
-
-        edges.append(edge)
-    return nodes,edges
-
+    step_once(0,0,1)
+    return solvable_game_state
 
 def solve(g_state:GameState,max_depth:int):
     path = [-1]*(max_depth+1)
@@ -122,12 +226,10 @@ def _solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n
     if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
         return -1
     
-    x = 10
-    while cur_node.teleport_to != -1 and x:
+    while cur_node.teleport_to != -1:
         cur_node = g_state.nodes[cur_node.teleport_to]        
         if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
             return -1 
-        x -= 1
 
     min_len = -1
     tick += cur_node.freeze_time
@@ -148,84 +250,19 @@ def _solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n
                     best_path[:] = path[:i+length_of_path+1]
     return min_len
 
-def solutionUsesAllCycles(g_state:GameState,path:list[int]):
-    # for each edge that cycles, the solution must include that pair of nodes as adjacent numbers (in any order)
-    edges_that_cycle = [edge for edge in g_state.edges if not all(edge.cycle)] # if edge.cycle contains any 0s, the edge actually cycles
-    
-    for edge in edges_that_cycle:
-        if not any([[edge.a_node, edge.b_node] == sorted(path[i:i+2]) for i in range(len(path)-1)]):
-            return False
-    return True
+def generateInterestingGameStates(min_sol_length:int, game_state_paramters_func):
+    game_state_paramters:GameStateGenerationParameters = game_state_paramters_func()
+    total_nodes = game_state_paramters.total_nodes
+    curr_game_state:GameState = generateSolvableGameState(game_state_paramters)
+    shortest_path = solve(curr_game_state, total_nodes)
+    if len(shortest_path) < min_sol_length:
+        yield from generateInterestingGameStates(min_sol_length, game_state_paramters_func)
+    else:
+        yield curr_game_state, shortest_path
+        yield from generateInterestingGameStates(min_sol_length, game_state_paramters_func)
 
-def filterSolutionsForAllCycleUse(state:GameState,solutions:list):
-    solution_blacklist = []
-    for start_pos,end_pos,tick,path in solutions:
-        if not solutionUsesAllCycles(state, path):
-            solution_blacklist.append((start_pos, end_pos)) 
-    
-    new_solutions = [solution for solution in solutions if (solution[0], solution[1]) not in solution_blacklist]
-
-    return new_solutions
-
-def generateInterestingGameStates(min_solution_len:int,max_depth:int,n:int,e:int,e_cycle_max:int,max_cycle_edges:int,use_all_cycles:bool):
-    master_rng = random.Random()
-    while True:
-        state = GameState()
-        rng = random.Random(zlib.adler32(str(master_rng.random()).encode()))
-        state.nodes,state.edges = generateGraph(n,e,e_cycle_max,max_cycle_edges,rng)
-        path = [-1]*(max_depth+1)
-        solutions = []
-        variations = 0
-        with debug.Timer() as tmr:
-            for start_pos in range(len(state.nodes)):
-                state.start_node = start_pos
-                for end_pos in range(len(state.nodes)):
-                    state.end_node = end_pos
-                    if start_pos == end_pos: continue
-                    for tick in range(min(25,e_cycle_max)):
-                        state.start_tick = tick
-                        path[0] = start_pos
-                        best_path = [-1]*(max_depth+1)
-                        variations += 1
-                        if _solve(state,0,0,path,best_path,max_depth) != -1:
-                            solutions.append((start_pos,end_pos,tick,best_path.copy()))
-
-        print(f'{variations=} in {tmr.format()}')                
-        solutions.sort(key=lambda x:len(x[3]),reverse=True)
-        
-        if use_all_cycles:
-            solutions = filterSolutionsForAllCycleUse(state, solutions)
-
-        got:set[tuple[int,int]] = set()
-        unique_start_end_solutions = []
-
-        for start_pos,end_pos,tick,path in solutions:
-            t = (start_pos,end_pos)
-            if t in got: continue
-            if len(path) < min_solution_len: continue
-            got.add(t)
-            unique_start_end_solutions.append((start_pos,end_pos,tick,path))
-        print(f'[{", ".join([f'{i}:{n}' for i,n in enumerate(state.nodes)])}]')
-        print(state.edges)
-        for start_pos,end_pos,tick,path in unique_start_end_solutions:
-            print('start:',start_pos)
-            print('end:',end_pos)
-            print('tick:',tick)
-            print(path)
-            print('#####################')
-
-        if len(unique_start_end_solutions) > 0: 
-            yield state, unique_start_end_solutions[0]
-        
 if __name__ == '__main__':
-    nodes = 5
-    edgePercent = 0.52
-
-    edges = max(int(math.comb(nodes, 2) * edgePercent), nodes-1)
-
-    max_cycle_edges = min(nodes, 3)
-
-    for x in generateInterestingGameStates(3,10,nodes,edges,2,max_cycle_edges,False):
+    for gameState, solution in generateInterestingGameStates(0, defaultGameStateParameters):
+        print(gameState)
+        print(solution)
         input("Press enter to regenerate")
-
-# make generateInterestingGameStates yield gamestate and path 
