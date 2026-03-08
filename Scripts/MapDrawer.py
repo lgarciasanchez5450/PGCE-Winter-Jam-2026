@@ -50,11 +50,16 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
             x = r * np.cos(theta)
             y = r * np.sin(theta)
             self.world.append((x,y),(0,0))
+        self.constraints.clear()
+        for i in range(1,len_nodes):
+            self.constraints.append((0,i))
     
     def setMap(self,nodes:list[Node],edges:list[Edge]):
         self.nodes = nodes
         self.edges = edges
         self.initialized = False
+        self.constraints:list[tuple[int,int]] = []
+
 
     def init(self):
         self.world = VerletPhysics(0,0.1)
@@ -71,15 +76,27 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
             self.initialized = True    
         accel = np.zeros((self.world.size,2))
         spring_k = 0.9
+        edge_lengths:list[float] = []
         for edge in self.edges:
             a_node_i = self.world.getInd(edge.a_node)
             b_node_i = self.world.getInd(edge.b_node)
             dif = self.world.pos[a_node_i] - self.world.pos[b_node_i]
-            length = np.sqrt(np.sum(dif*dif))
-            norm = dif / length
-            accel[a_node_i] -= norm * length * spring_k
-            accel[b_node_i] += norm * length * spring_k
-        
+            distance = np.sqrt(np.sum(dif*dif))
+            edge_lengths.append(distance)
+            norm = dif / distance
+            accel[a_node_i] -= norm * distance * spring_k
+            accel[b_node_i] += norm * distance * spring_k
+        edge_lengths.sort()
+        length = sum(edge_lengths) / len(edge_lengths) * 0.05
+        for b_node in range(len(self.nodes)):
+            b_node_i = self.world.getInd(b_node)
+            dif = self.world.pos[b_node_i]
+            distance = np.sqrt(np.sum(dif*dif))
+            force = distance/length
+            norm = dif / distance
+            accel[b_node_i] -= norm * force
+            accel[b_node_i] -= (dif /length)
+                    
         for i in range(self.world.size):
             difs = self.world.pos[i] - self.world.getPoss()
             dists = np.sqrt(np.sum(difs*difs,axis=1))

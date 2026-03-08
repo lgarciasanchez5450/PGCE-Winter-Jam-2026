@@ -4,7 +4,7 @@ from Scripts import SerializeHelper
 from Engine import *
 if __name__ == '__main__':
     pygame.init()
-    window = pygame.Window()
+    window = pygame.Window(resizable=True)
     engine = Engine(window.get_surface())
     engine.addSystem(MainMenu,'')
     engine.Initialize()
