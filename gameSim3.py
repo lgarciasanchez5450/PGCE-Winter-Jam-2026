@@ -27,6 +27,14 @@ class GameState:
     nodes:list[Node]
     edges:list[Edge]
 
+    @property
+    def start_node(self):
+        return 0
+    
+    @property
+    def end_node(self):
+        return len(self.nodes) - 1
+
     def __init__(self):
         self.edges = []
         self.nodes = []
