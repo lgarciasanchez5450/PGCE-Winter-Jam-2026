@@ -133,10 +133,10 @@ def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
         solvable_game_state.edges.append(new_edge)
 
     def step_once(tick:int,prev_pos:int,curr_pos:int) -> None:
-        print("\n\nA NEW CALL TO STEP_ONCE IS STARTING!")
+        # print("\n\nA NEW CALL TO STEP_ONCE IS STARTING!")
 
         if not isValidNodePos(prev_pos):
-            print("MAKING NEW NODE!")
+            # print("MAKING NEW NODE!")
             new_node:Node = Node()
             new_node_type = chooseRemainingType(p.node_amounts_remaining)
 
@@ -151,11 +151,11 @@ def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
             solvable_game_state.nodes.append(new_node)
 
         if isRemainingDictEmpty(p.edge_amounts_remaining):
-            print("PATH ENDED FOR LACK OF EDGES")
+            # print("PATH ENDED FOR LACK OF EDGES")
             return
         
         if isRemainingDictEmpty(p.node_amounts_remaining): #probably gonna backfire when you can backtrack
-            print("PATH ENDED FOR LACK OF NODES")
+            # print("PATH ENDED FOR LACK OF NODES")
             return
     
         if solvable_game_state.nodes[prev_pos].teleport_to != curr_pos and not doesEdgeAlreadyExist(prev_pos,curr_pos):
@@ -163,38 +163,37 @@ def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
         
         if isValidNodePos(curr_pos):
             curr_node = solvable_game_state.nodes[curr_pos]
-            
-            tick += curr_node.freeze_time
 
             attempts_at_finding_non_teleporting_node = 1
             while curr_node.teleport_to != -1: # beware of infinite tp-node loops
                 if attempts_at_finding_non_teleporting_node == len(solvable_game_state.nodes):
                     generateEdgeBetween(curr_pos,curr_node.teleport_to,tick) # TICK MIGHT NEED TO BE +1 or -1 here
                     curr_node.teleport_to = -1
-                    print("STEPPING HERE 4")
+                    # print("STEPPING HERE 4")
                     step_once(tick,curr_pos,len(solvable_game_state.nodes)) #TICK IS NOT +1 HERE ON PURPOSE!!
-                    print("EXITING HERE 3")
+                    # print("EXITING HERE 3")
                     return
                 curr_pos = curr_node.teleport_to
                 curr_node = solvable_game_state.nodes[curr_pos]
-                
                 attempts_at_finding_non_teleporting_node += 1
 
+            tick += curr_node.freeze_time
+                
         # print(f'{p.node_amounts_remaining=}')
         # print(f'{p.edge_amounts_remaining=}')
 
-        print("step_once called for tick:",tick)
-        print(f'{prev_pos=}')
-        print(f'{curr_pos=}')
+        # print("step_once called for tick:",tick)
+        # print(f'{prev_pos=}')
+        # print(f'{curr_pos=}')
 
         if isValidNodePos(curr_pos):
-            print("BRANCHING FROM VALID POS")
+            # print("BRANCHING FROM VALID POS")
             step_once(tick+1,curr_pos,len(solvable_game_state.nodes))
         elif random.random() < p.branch_chance:
-            print("BRANCHING FROM NOT VALID POS")
+            # print("BRANCHING FROM NOT VALID POS")
             step_once(tick+1,curr_pos,len(solvable_game_state.nodes)+1)
         else:
-            print("NOT BRANCHING")
+            # print("NOT BRANCHING")
             next_pos = random.randint(0,len(solvable_game_state.nodes)-1)
             attempts_at_finding_non_exploding_node = 1
             while solvable_game_state.nodes[next_pos].explosion_time != -1 and next_pos != curr_pos:
@@ -204,7 +203,7 @@ def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
                 next_pos = random.randint(0,len(solvable_game_state.nodes)-1)
                 attempts_at_finding_non_exploding_node += 1
             
-            print("STEPPING HERE 3")
+            # print("STEPPING HERE 3")
             step_once(tick+1,curr_pos,next_pos)
 
     step_once(0,0,1)
@@ -212,6 +211,7 @@ def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
 
 def solve(g_state:GameState,max_depth:int):
     path = [-1]*(max_depth+1)
+    path[0] = 0
     best_path = [-1]*(max_depth+1)
     _solve(g_state,0,0,path,best_path,max_depth)
     return best_path
@@ -230,6 +230,10 @@ def _solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n
         cur_node = g_state.nodes[cur_node.teleport_to]        
         if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
             return -1 
+        
+    if cur_pos == g_state.end_node: return 0
+        
+    # print("ITS WORKING!")
 
     min_len = -1
     tick += cur_node.freeze_time
