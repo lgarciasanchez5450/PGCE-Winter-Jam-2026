@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
         keysu = pygame.key.get_just_released()
 
-        if keysd[pygame.K_SPACE]:
+        if keysd[pygame.K_UP]:
             level = engine.getSystem(LevelSystem)
             level.setState(next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
             level.init()

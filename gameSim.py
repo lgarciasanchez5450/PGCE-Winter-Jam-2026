@@ -69,7 +69,8 @@ class GameStateGenerationParameters:
 
     branch_chance:float
 
-def defaultGameStateParameters() -> GameStateGenerationParameters:
+def defaultGameStateParameters() -> GameStateGenerationParameters: 
+    # MAKE THIS FUNCTION BE RANDOM LOL EACH TIME, PRINT OUT RANDOM PARAMETERS USED TO GENERATE THE LEVEL EACH TIME
     game_state_paramters: GameStateGenerationParameters = GameStateGenerationParameters()
     game_state_paramters.node_amounts_remaining = {GameStateGenerationParameters.FR_NODE: 3,
                                                     GameStateGenerationParameters.EX_NODE: 2,
