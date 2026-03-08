@@ -96,6 +96,8 @@ class Mapping[K]:
         self.cache[k] = surf
         return surf
     
+        
+    
     def __getitem__(self,k:K) -> pygame.Surface:
         return self.get(k)
         

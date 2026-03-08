@@ -46,7 +46,7 @@ class Blit:
         self.dest = dest
         self.area = area
         self.special_flags = special_flags
-    
+
     def draw(self,surf:Surface):
         surf.blit(self.source,self.dest,self.area,self.special_flags)
         
@@ -90,7 +90,16 @@ class Line:
     def draw(self,surf:Surface):
         pygame.draw.line(surf,self.color,self.start_pos,self.end_pos,self.width)
         
+class Fill:
+    __slots__ = 'color','rect','special_flags'
+    def __init__(self,color:pygame.typing.ColorLike,rect:pygame.typing.RectLike|None=None,special_flags:int=0):
+        self.color = color
+        self.rect = rect
+        self.special_flags = special_flags
         
+    def draw(self,surf:Surface):
+        surf.fill(self.color,self.rect,self.special_flags)
+                
 class Lines:
     __slots__ = 'color','closed','points','width'
     def __init__(self,color:pygame.typing.ColorLike,closed:bool,points: pygame.typing.SequenceLike[pygame.typing.Point],width: int = 1):

@@ -16,8 +16,7 @@ class EngineEvent:
     STOPPED = 3
 
 class EngineState:
-    systems:list[tuple[str,str,tuple]]
-    
+    systems:list[tuple[str,str,bool,tuple]]
     @classmethod
     def empty(cls):
         out = cls()
@@ -27,9 +26,10 @@ class EngineState:
     def serialize(self) -> bytes:
         writer = Writer()
         writer.writeInt(len(self.systems))
-        for fqn,name,state in self.systems:
+        for fqn,name,static,state in self.systems:
             writer.writeStr(fqn)
             writer.writeStr(name)
+            writer.writeBool(static)
             writer.writeInt(len(state))
             for item in state:
                 writer.writeType(item)
@@ -46,26 +46,33 @@ class EngineState:
     def deserialize(cls,b:bytes) -> 'EngineState':
         reader = Reader(b)
         num_systems = reader.readInt()
-        systems:list[tuple[str,str,tuple[typing.Any,...]]] = []
+        systems:list[tuple[str,str,bool,tuple[typing.Any,...]]] = []
         for _ in range(num_systems):
             fqn = reader.readStr()
             name = reader.readStr()
+            static = reader.readBool()
             state_len = reader.readInt()
             state:list[typing.Any] = []
             for _ in range(state_len):
                 typ = reader.readType()
                 obj = reader.read(typ)
                 state.append(obj)
-            systems.append((fqn,name,tuple(state)))
+            systems.append((fqn,name,static,tuple(state)))
 
         e_state = EngineState()
         e_state.systems = systems
         return e_state
 
-
+    def setSystemArgs[*TT](self,typ:type[BaseSystem[*TT]],name:str,static:bool,*args:*TT):
+        for i,(fqn,sys_name,sys_static,args) in enumerate(self.systems):
+            if typ._fqn == fqn and name == sys_name and static == sys_static:
+                self.systems[i] = (fqn,sys_name,sys_static,args)
+                return
+        raise LookupError
 class Engine:
     systems:list[BaseSystem]
     layers:defaultdict[int,list[Drawable]]
+    scenes:dict[str,EngineState]
     dt:float
     def __init__(self,viewport:pygame.Surface):
         self.screen = viewport
@@ -76,8 +83,8 @@ class Engine:
         self.dt = 0
         self.assetManager = AssetManager()
         self.async_ctx = Async.Context()
+        self.scenes = {}
         
-        self.last_exception:typing.Optional[BaseException] = None
         
     def draw(self,drawable:Drawable,layer:int=0):
         self.layers[layer].append(drawable)
@@ -92,12 +99,13 @@ class Engine:
             return system
         raise LookupError
        
-    def addSystem[*TT](self,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
-        system = typ(self,name)
+    def addSystem[*TT](self,typ:type[BaseSystem[*TT]],name:str,static:bool,*args:*TT):
+        system = typ(self,name,static)
         try:system.setState(*args)
         except Exception: pass
         if self.initialized:
             system.init()
+            system.initialized = True
         self.systems.append(system)
 
     def removeSystem(self,system:BaseSystem):
@@ -112,25 +120,28 @@ class Engine:
     def checkCoroutine(self,coro:typing.Generator|typing.Awaitable):
         return self.async_ctx.isAlive(coro) # pyright: ignore[reportArgumentType]
 
-    def addSystemToState[*TT](self,state:EngineState,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
+    def addSystemToState[*TT](self,state:EngineState,typ:type[BaseSystem[*TT]],name:str,static:bool,*args:*TT):
         if not isSerializeable(args):
             raise RuntimeError(f'Serialization Error: System \'{typ.__name__}\' returned an unserializable state: {repr(args)}')
-        state.systems.append((str(typ._fqn),str(name),args))
+        state.systems.append((str(typ._fqn),str(name),bool(static),args))
 
     def getState(self) -> EngineState:
         e_state = EngineState()
         e_state.systems = []
         for system in self.systems:
-            self.addSystemToState(e_state,type(system),system.name,system.getState())
+            self.addSystemToState(e_state,type(system),system.name,system.static,system.getState())
         return e_state
     
     def loadState(self,state:EngineState):
-        for sys_fqn,sys_name,sys_state  in state.systems:
+        for sys_fqn,sys_name,sys_static,sys_state  in state.systems:
             system_cls = BaseSystem._fqn_to_cls[sys_fqn]
-            self.addSystem(system_cls,sys_name,*sys_state)
+            self.addSystem(system_cls,sys_name,sys_static,*sys_state)
         
     def clearState(self):
-        self.systems.clear()
+        for system in self.systems[:]:
+            if not system.static:
+                self.systems.remove(system)
+        self.initialized = False
 
     def broadcastEvent(self,event):
         for system in self.systems:
@@ -141,7 +152,9 @@ class Engine:
     def Initialize(self):
         self.initialized = True
         for system in self.systems:
-            system.init()
+            if not system.initialized:
+                system.init()
+                system.initialized = True
         self.broadcastEvent(EngineEvent.INITIALIZED)
 
     def Update(self,events:list[pygame.Event],keys:pygame.key.ScancodeWrapper,keys_down:pygame.key.ScancodeWrapper,keys_up:pygame.key.ScancodeWrapper):
@@ -164,4 +177,8 @@ class Engine:
     def SetViewport(self,viewport:pygame.Surface):
         self.screen = viewport
         
+    def addScene(self,name:str,state:EngineState):
+        self.scenes[name] = state
         
+    def getScene(self,name:str):
+        return self.scenes[name]

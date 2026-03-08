@@ -3,8 +3,9 @@ from Scripts.Camera import Camera
 from Scripts.MapDrawer import MapDrawer
 from gameSim import GameState
 import numpy as np
+import time
 
-class Level(BaseSystem[GameState]):
+class LevelSystem(BaseSystem[GameState]):
     def getState(self) -> tuple[GameState]:
         return self.gamestate,
     
@@ -22,10 +23,40 @@ class Level(BaseSystem[GameState]):
 
         self.map.setMap(self.gamestate.nodes,self.gamestate.edges)
         
+    def EngineStateTransition(self,state:EngineState):
+        t = time.perf_counter()
+        t_end = t+1
+        surf = pygame.Surface(self.engine.screen.size)
+        while t < t_end:
+            dif = t_end-t
+            surf.set_alpha(int((1-dif)**2*255))
+            self.engine.draw(Drawable.Blit(surf),layer=99)
+            yield
+            t = time.perf_counter()
+        surf.set_alpha(255)        
+        self.engine.draw(Drawable.Blit(surf),layer=99)
+        self.engine.clearState()
+        self.engine.loadState(state)
+        self.engine.Initialize()
+        t = time.perf_counter()
+        t_end = t+1
+
+        while t < t_end:
+            dif = t_end-t
+            surf.set_alpha(int((dif)**2*255))
+            self.engine.draw(Drawable.Blit(surf),layer=99)
+            yield
+            t = time.perf_counter()
+        surf.set_alpha(0)        
+        self.engine.draw(Drawable.Blit(surf),layer=99)
+
+        
 
     def update(self):
         if self.engine.keys_down[pygame.K_SPACE]:
             self.onPlayerNodeChange()
+        if self.engine.keys_down[pygame.K_x]:
+            self.engine.startCoroutine(self.EngineStateTransition(self.engine.getScene('level menu')))
             
         delta = self.engine.keys_down[pygame.K_RIGHT] - self.engine.keys_down[pygame.K_LEFT]
         if delta and self.possible_moves:
@@ -39,7 +70,6 @@ class Level(BaseSystem[GameState]):
             move_angle = np.atan2(dif[1],dif[0])
             self.character_node = self.possible_moves[self.move_option_i]
             self.onPlayerNodeChange(keep_angle=move_angle)
-        
     
     def draw(self):
         camera_offset = self.camera.offset

@@ -1,12 +1,37 @@
 import pygame
 from Scripts.MainMenu import MainMenu
+from Scripts.LevelMenu import LevelMenu
+from Scripts.Camera import Camera
+from Scripts.MapDrawer import MapDrawer
+from Scripts.Level import LevelSystem
+from Scripts.GameData import GameData
+from gameSim import generateInterestingGameStates
 from Scripts import SerializeHelper
 from Engine import *
 if __name__ == '__main__':
     pygame.init()
     window = pygame.Window(resizable=True)
     engine = Engine(window.get_surface())
-    engine.addSystem(MainMenu,'')
+    engine.addSystem(GameData,'data',True)
+    
+    main_menu_scene = EngineState.empty()
+    engine.addSystemToState(main_menu_scene,MainMenu,'',False)
+    engine.addScene('main menu',main_menu_scene)
+    
+    
+    level_menu_scene = EngineState.empty()
+    engine.addSystemToState(level_menu_scene,LevelMenu,'',False)
+    engine.addScene('level menu',level_menu_scene)
+    
+    
+    level_scene = EngineState.empty()
+    engine.addSystemToState(level_scene,Camera,'',False,pygame.Vector2())
+    engine.addSystemToState(level_scene,MapDrawer,'',False,[],[])
+    engine.addSystemToState(level_scene,LevelSystem,'',False,next(generateInterestingGameStates(1,10,5,7,2,3,False))[0])
+    engine.addScene('level',level_scene)
+
+    
+    engine.loadState(engine.getScene('main menu'))
     engine.Initialize()
     clock = pygame.Clock()
     engine.running = True

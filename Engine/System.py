@@ -4,7 +4,6 @@ import sys
 from .Serialize import Writer, Reader
 if typing.TYPE_CHECKING:
     from Engine import Engine
-
 def _cls_module_path(cls:type):
     return os.path.abspath(sys.modules[cls.__module__].__file__ or '')
 
@@ -13,8 +12,9 @@ class BaseSystem[*T]:
     _fqn_to_cls = _fqn_to_cls
     name:str
     engine:'Engine'
+    static:bool
     _fqn:str = 'BaseSystem'
-    __slots__ = 'name','engine'
+    __slots__ = 'name','engine','static','initialized'
     
     def __init_subclass__(cls) -> None:
         necessary_attrs = []#['serialize','deserialize']
@@ -27,9 +27,12 @@ class BaseSystem[*T]:
         assert cls._fqn not in _fqn_to_cls, f'System FQN Clash {repr(cls._fqn)}\nFile A: {_cls_module_path(cls)}\nFile B: {_cls_module_path(_fqn_to_cls[cls._fqn])}'
         _fqn_to_cls[cls._fqn] = cls
 
-    def __init__(self,engine:'Engine',name:str,):
+    def __init__(self,engine:'Engine',name:str,static:bool):
         self.engine = engine
         self.name = name
+        self.static = static
+        self.initialized = False
+        
     
     def onEngineEvent(self,event): ... #gets called misc. engine events
     

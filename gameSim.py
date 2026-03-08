@@ -122,10 +122,12 @@ def _solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n
     if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
         return -1
     
-    while cur_node.teleport_to != -1:
+    x = 10
+    while cur_node.teleport_to != -1 and x:
         cur_node = g_state.nodes[cur_node.teleport_to]        
         if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
             return -1 
+        x -= 1
 
     min_len = -1
     tick += cur_node.freeze_time
