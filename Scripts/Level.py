@@ -50,9 +50,10 @@ class LevelSystem(BaseSystem[GameState]):
         surf.set_alpha(0)        
         self.engine.draw(Drawable.Blit(surf),layer=99)
 
-        
-
     def update(self):
+        if self.engine.keys_down[pygame.K_r]:
+            self.setState(self.gamestate)
+            
         if self.engine.keys_down[pygame.K_SPACE]:
             self.onPlayerNodeChange()
         if self.engine.keys_down[pygame.K_x]:
@@ -69,6 +70,9 @@ class LevelSystem(BaseSystem[GameState]):
             dif = self.map.getPos(node_to) - self.map.getPos(node_from)
             move_angle = np.atan2(dif[1],dif[0])
             self.character_node = self.possible_moves[self.move_option_i]
+            self.tick += 1
+            self.tick += self.gamestate.nodes[self.character_node].freeze_time
+            self.map.setTick(self.tick)
             self.onPlayerNodeChange(keep_angle=move_angle)
     
     def draw(self):
@@ -90,7 +94,6 @@ class LevelSystem(BaseSystem[GameState]):
         return self.connections.get((a,b))
         
     def onPlayerNodeChange(self,keep_angle:float|None=None):
-
         self.possible_moves = self.possibleMoves(self.character_node)
         cur_pos = self.map.getPos(self.character_node)
         positions = self.map.world.gets(self.possible_moves)

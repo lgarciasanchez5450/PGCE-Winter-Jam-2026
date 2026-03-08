@@ -31,6 +31,7 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
 
     def setState(self,nodes:list[Node],edges:list[Edge]):
         self.setMap(nodes,edges)
+        self.tick = 0
 
     def applyChanges(self):
         self.world.clear()
@@ -61,11 +62,17 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
         self.constraints:list[tuple[int,int]] = []
 
 
+    def setTick(self,tick:int):
+        self.tick = tick
+
     def init(self):
         self.world = VerletPhysics(0,0.1)
         self.node_surf = self.engine.assetManager.get('Assets/web_node.asset',pygame.Surface)
+        self.node_surf_gray = self.node_surf.copy()
+        self.node_surf_gray.set_alpha(100)
         self.font = pygame.font.SysFont('Arial',16)
         self.ntosurf = Text.Mapping[int](self.font,True,'black')
+        self.text = Text.Text(self.font,True,'white')
 
     def getPos(self,node:int):
         return self.world.get(node)
@@ -113,10 +120,20 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
         except LookupError:
             camera_offset = (0,0)
         poss = self.world.getPoss().copy() + camera_offset 
+        self.engine.draw(Drawable.BlitFuture(self.text.setText(f'Tick: {self.tick}').render),layer = 2)
         for edge in self.edges:
-            self.engine.draw(Drawable.Line('white',poss[edge.a_node],poss[edge.b_node],3),layer=1)
+            if not edge.cycle[(self.tick)%len(edge.cycle)]: 
+                self.engine.draw(Drawable.Line((50,50,50),poss[edge.a_node],poss[edge.b_node],3),layer=1)
+            else:
+                self.engine.draw(Drawable.Line('white',poss[edge.a_node],poss[edge.b_node],3),layer=1)
         poss = poss + (-self.node_surf.width//2,-self.node_surf.height//2)   
-        self.engine.draw(Drawable.FBlits([(self.node_surf,pos) for pos in poss]),layer=2)
+        for node_i,node in enumerate(self.nodes):
+            pos = poss[self.world.id_to_ind[node_i]]
+            if node.explosion_time != -1 and node.explosion_time <= self.tick:
+                self.engine.draw(Drawable.Blit(self.node_surf_gray,pos))
+            else:
+                self.engine.draw(Drawable.Blit(self.node_surf,pos))
+        # self.engine.draw(Drawable.FBlits([(self.node_surf,pos) for pos in poss]),layer=2)
         
         for pos, id in zip(poss + (5,0),self.world.getIDs(),strict=True):
             self.engine.draw(Drawable.Blit(self.ntosurf[id],pos),layer=2)
