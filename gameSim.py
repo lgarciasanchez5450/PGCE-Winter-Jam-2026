@@ -219,16 +219,23 @@ def solve(g_state:GameState,max_depth:int):
 def _solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n:int):
     cur_pos = path[i]
     if cur_pos == g_state.end_node: return 0
-    if i+1 > len(best_path): return -1
-    if n <= 0: return -1
+    if i+1 > len(best_path): 
+        # print("LONGER THAN FASTEST")
+        return -1
+    if n <= 0: 
+        # print("RAN OUT OF TIME")
+        return -1
     cur_node = g_state.nodes[cur_pos]
 
     if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
+        # print("BLEW UP")
         return -1
     
     while cur_node.teleport_to != -1:
-        cur_node = g_state.nodes[cur_node.teleport_to]        
+        cur_pos = cur_node.teleport_to
+        cur_node = g_state.nodes[cur_pos]        
         if cur_node.explosion_time >= 0 and cur_node.explosion_time <= tick:
+            # print("BLEW UP")
             return -1 
         
     if cur_pos == g_state.end_node: return 0

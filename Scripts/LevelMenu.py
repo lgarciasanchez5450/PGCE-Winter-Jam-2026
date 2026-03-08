@@ -109,7 +109,7 @@ class LevelMenu(BaseSystem[()]):
         
         self.current_level_i += di
         self.current_level_i = min(max(self.current_level_i,0),len(self.game.levels)-1)
-        print(self.current_level_i)
+        # print(self.current_level_i)
     
     def draw(self):
         self.engine.draw(self.renderer)

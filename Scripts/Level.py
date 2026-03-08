@@ -17,6 +17,10 @@ class LevelSystem(BaseSystem[GameState]):
         self.possible_moves:list[int] = []
         self.move_option_i:int = 0
 
+        self.character_node = self.handleChangeToTeleportNode(self.character_node)
+        self.tick += self.gamestate.nodes[self.character_node].freeze_time
+        print(gamestate)
+
     def init(self):
         self.camera = self.engine.getSystem(Camera)
         self.map = self.engine.getSystem(MapDrawer)
@@ -71,6 +75,7 @@ class LevelSystem(BaseSystem[GameState]):
             move_angle = np.atan2(dif[1],dif[0])
             self.character_node = self.possible_moves[self.move_option_i]
             self.tick += 1
+            self.character_node = self.handleChangeToTeleportNode(self.character_node)
             self.tick += self.gamestate.nodes[self.character_node].freeze_time
             self.map.setTick(self.tick)
             self.onPlayerNodeChange(keep_angle=move_angle)
@@ -93,6 +98,11 @@ class LevelSystem(BaseSystem[GameState]):
         if a>b: a,b = b,a
         return self.connections.get((a,b))
         
+    def handleChangeToTeleportNode(self, curr_node:int) -> int:
+        while self.gamestate.nodes[curr_node].teleport_to != -1:
+            curr_node = self.gamestate.nodes[curr_node].teleport_to
+        return curr_node
+
     def onPlayerNodeChange(self,keep_angle:float|None=None):
         self.possible_moves = self.possibleMoves(self.character_node)
         cur_pos = self.map.getPos(self.character_node)
