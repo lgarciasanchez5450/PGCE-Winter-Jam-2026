@@ -14,24 +14,10 @@ if __name__ == '__main__':
     engine = Engine(window.get_surface())
     engine.addSystem(GameData,'data',True)
     
-    main_menu_scene = EngineState.empty()
-    engine.addSystemToState(main_menu_scene,MainMenu,'',False)
-    engine.addScene('main menu',main_menu_scene)
-    
-    
-    level_menu_scene = EngineState.empty()
-    engine.addSystemToState(level_menu_scene,LevelMenu,'',False)
-    engine.addScene('level menu',level_menu_scene)
-    
-    
-    level_scene = EngineState.empty()
-    engine.addSystemToState(level_scene,Camera,'',False,pygame.Vector2())
-    engine.addSystemToState(level_scene,MapDrawer,'',False,[],[])
-    engine.addSystemToState(level_scene,LevelSystem,'',False,next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
-    engine.addScene('level',level_scene)
+    engine.addSystem(Camera,'',False,pygame.Vector2())
+    engine.addSystem(MapDrawer,'',False,[],[])
+    engine.addSystem(LevelSystem,'',False,next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
 
-    
-    engine.loadState(engine.getScene('main menu'))
     engine.Initialize()
     clock = pygame.Clock()
     engine.running = True
@@ -40,8 +26,16 @@ if __name__ == '__main__':
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             engine.running = False
+
         keysd = pygame.key.get_just_pressed()
+
         keysu = pygame.key.get_just_released()
+
+        if keysd[pygame.K_SPACE]:
+            level = engine.getSystem(LevelSystem)
+            level.setState(next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
+            level.init()
+
         engine.Update(pygame.event.get(),keys,keysd,keysu)
         engine.screen.fill('black')
         engine.Draw()
