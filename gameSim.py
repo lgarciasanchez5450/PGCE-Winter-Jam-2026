@@ -81,6 +81,20 @@ def defaultGameStateParameters() -> GameStateGenerationParameters:
     game_state_paramters.branch_chance = 0.5
     return game_state_paramters
 
+
+def buildGameStateParametersFunc(min_fr,max_fr,min_ex,max_ex,min_tp,max_tp,min_n,max_n,min_n_e,max_n_e,min_c_e,max_c_e,min_b_c,max_b_c):
+    def gameStateParametersCreator():
+        game_state_paramters: GameStateGenerationParameters = GameStateGenerationParameters()
+        game_state_paramters.node_amounts_remaining = {GameStateGenerationParameters.FR_NODE: random.randint(min_fr,max_fr),
+                                                        GameStateGenerationParameters.EX_NODE: random.randint(min_ex,max_ex),
+                                                        GameStateGenerationParameters.TP_NODE: random.randint(min_tp,max_tp),
+                                                        GameStateGenerationParameters.N_NODE: random.randint(min_n,max_n)}
+        game_state_paramters.edge_amounts_remaining = {GameStateGenerationParameters.C_EDGE: random.randint(min_n_e,max_n_e),
+                                                    GameStateGenerationParameters.N_EDGE: random.randint(min_c_e,max_c_e)}
+        game_state_paramters.branch_chance = min_b_c + random.random()*(max_b_c-min_b_c)
+        return game_state_paramters
+    return gameStateParametersCreator
+
 import random
 def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
     solvable_game_state = GameState()
@@ -267,7 +281,7 @@ def generateInterestingGameStates(min_sol_length:int, game_state_paramters_func)
     total_nodes = game_state_paramters.total_nodes
     curr_game_state:GameState = generateSolvableGameState(game_state_paramters)
     shortest_path = solve(curr_game_state, total_nodes)
-    if len(shortest_path) < min_sol_length:
+    if len(shortest_path) <= min_sol_length or -1 in shortest_path:
         yield from generateInterestingGameStates(min_sol_length, game_state_paramters_func)
     else:
         yield curr_game_state, shortest_path

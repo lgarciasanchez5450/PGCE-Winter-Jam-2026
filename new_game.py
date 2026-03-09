@@ -5,7 +5,7 @@ from Scripts.Camera import Camera
 from Scripts.MapDrawer import MapDrawer
 from Scripts.Level import LevelSystem
 from Scripts.GameData import GameData
-from gameSim import defaultGameStateParameters, generateInterestingGameStates
+from gameSim import defaultGameStateParameters, generateInterestingGameStates, buildGameStateParametersFunc
 from Scripts import SerializeHelper
 from Engine import *
 if __name__ == '__main__':
@@ -14,9 +14,12 @@ if __name__ == '__main__':
     engine = Engine(window.get_surface())
     engine.addSystem(GameData,'data',True)
     
+    gameStateParamtersFunc = buildGameStateParametersFunc(0, 3, 0, 3, 0, 3, 4, 6, 4, 10, 0, 3, 0.25, 0.75)
+    gameStateGenerator = generateInterestingGameStates(3,gameStateParamtersFunc)
+
     engine.addSystem(Camera,'',False,pygame.Vector2())
     engine.addSystem(MapDrawer,'',False,[],[])
-    engine.addSystem(LevelSystem,'',False,next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
+    engine.addSystem(LevelSystem,'',False,next(gameStateGenerator)[0])
 
     engine.Initialize()
     clock = pygame.Clock()
@@ -33,7 +36,8 @@ if __name__ == '__main__':
 
         if keysd[pygame.K_UP]:
             level = engine.getSystem(LevelSystem)
-            level.setState(next(generateInterestingGameStates(1,defaultGameStateParameters))[0])
+            nextGameState = next(gameStateGenerator)[0]
+            level.setState(nextGameState)
             level.init()
 
         engine.Update(pygame.event.get(),keys,keysd,keysu)
