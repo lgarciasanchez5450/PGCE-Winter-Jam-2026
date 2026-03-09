@@ -14,8 +14,8 @@ if __name__ == '__main__':
     engine = Engine(window.get_surface())
     engine.addSystem(GameData,'data',True)
     
-    gameStateParamtersFunc = buildGameStateParametersFunc(0, 3, 0, 3, 0, 3, 4, 6, 4, 10, 0, 3, 0.25, 0.75)
-    gameStateGenerator = generateInterestingGameStates(3,gameStateParamtersFunc)
+    gameStateParamtersFunc = buildGameStateParametersFunc(0, 7, 0, 7, 0, 3, 4, 8, 8, 13, 2, 7, 0.25, 0.75)
+    gameStateGenerator = generateInterestingGameStates(6,gameStateParamtersFunc)
 
     engine.addSystem(Camera,'',False,pygame.Vector2())
     engine.addSystem(MapDrawer,'',False,[],[])
