@@ -19,13 +19,14 @@ class LevelSystem(BaseSystem[GameState]):
 
         self.character_node = self.handleChangeToTeleportNode(self.character_node)
         self.tick += self.gamestate.nodes[self.character_node].freeze_time
-        print(gamestate)
+        #print(gamestate)
 
     def init(self):
         self.camera = self.engine.getSystem(Camera)
         self.map = self.engine.getSystem(MapDrawer)
 
         self.map.setMap(self.gamestate.nodes,self.gamestate.edges)
+        self.map.setTick(0)
         
     def EngineStateTransition(self,state:EngineState):
         t = time.perf_counter()
@@ -88,7 +89,7 @@ class LevelSystem(BaseSystem[GameState]):
             Drawable.Rect('blue',pygame.Rect(0,0,20,20).move_to(center=character_pos).move(camera_offset),width=3),layer=3
         )
         for i,node in enumerate(self.possible_moves):
-            color = 'green' if self.move_option_i == i else 'red'
+            color = 'green2' if self.move_option_i == i else 'red'
             pos = np.floor(self.map.getPos(node))
             self.engine.draw(
                 Drawable.Rect(color,pygame.Rect(0,0,20,20).move_to(center=pos).move(camera_offset),width=3),layer=3

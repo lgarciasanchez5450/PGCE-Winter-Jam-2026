@@ -122,17 +122,37 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
         poss = self.world.getPoss().copy() + camera_offset 
         self.engine.draw(Drawable.BlitFuture(self.text.setText(f'Tick: {self.tick}').render),layer = 2)
         for edge in self.edges:
-            if not edge.cycle[(self.tick)%len(edge.cycle)]: 
-                self.engine.draw(Drawable.Line((50,50,50),poss[edge.a_node],poss[edge.b_node],3),layer=1)
+            if not all(edge.cycle):
+                if not edge.cycle[(self.tick)%len(edge.cycle)]: 
+                    self.engine.draw(Drawable.Line((50,50,50),poss[edge.a_node],poss[edge.b_node],3),layer=1)
+                else:
+                    self.engine.draw(Drawable.Line("deeppink3",poss[edge.a_node],poss[edge.b_node],3),layer=1)
             else:
                 self.engine.draw(Drawable.Line('white',poss[edge.a_node],poss[edge.b_node],3),layer=1)
-        poss = poss + (-self.node_surf.width//2,-self.node_surf.height//2)   
+        poss = poss + (-self.node_surf.width//2,-self.node_surf.height//2)
+
         for node_i,node in enumerate(self.nodes):
             pos = poss[self.world.id_to_ind[node_i]]
-            if node.explosion_time != -1 and node.explosion_time <= self.tick:
-                self.engine.draw(Drawable.Blit(self.node_surf_gray,pos))
+            if node.explosion_time != -1:
+                self.engine.draw(
+                    Drawable.Rect('gold2',pygame.Rect(pos[0]-3,pos[1]-3,26,26),width=3),layer=3
+                )
+                if node.explosion_time <= self.tick:
+                    self.engine.draw(Drawable.Blit(self.node_surf_gray,pos),layer=2)
+                else:
+                    self.engine.draw(Drawable.Blit(self.node_surf,pos),layer=2)
             else:
-                self.engine.draw(Drawable.Blit(self.node_surf,pos))
+                self.engine.draw(Drawable.Blit(self.node_surf,pos),layer=2)
+                
+            if node.teleport_to != - 1:
+                self.engine.draw(
+                    Drawable.Rect('darkorchid1',pygame.Rect(pos[0]-3,pos[1]-3,26,26),width=3),layer=3
+                )
+            elif node.freeze_time != 0:
+                self.engine.draw(
+                    Drawable.Rect('dodgerblue2',pygame.Rect(pos[0]-3,pos[1]-3,26,26),width=3),layer=3
+                )
+                
         # self.engine.draw(Drawable.FBlits([(self.node_surf,pos) for pos in poss]),layer=2)
         
         for pos, id in zip(poss + (5,0),self.world.getIDs(),strict=True):
