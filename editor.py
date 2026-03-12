@@ -7,28 +7,32 @@ from Editor.Inspector import Inspector
         
 def main():
     window = pygame.Window(resizable=True)
-    editor_engine = Engine(window.get_surface())
-    editor_engine.addSystem(Hierarchy,'',pygame.Rect(0,0,200,400),EngineState.empty().serialize())
-    editor_engine.addSystem(Inspector,'',pygame.Rect(window.size[0]-200,0,200,400))
+    editor_engine = Scene(window.get_surface())
+    editor_engine.addSystem(Hierarchy,'',False,pygame.Rect(0,0,200,400),EngineState.empty().serialize())
+    editor_engine.addSystem(Inspector,'',False,pygame.Rect(window.size[0]-200,0,200,400))
     
     hierarchy = editor_engine.getSystem(Hierarchy)
     inspector = editor_engine.getSystem(Inspector)
     
-    editor_engine.Initialize()
+    editor_engine.Start()
     clock = pygame.Clock()
-    editor_engine.running = True
+    running = True
     editor_engine.broadcastEvent(EngineEvent.STARTED)
-    while editor_engine.running:
+    while running:
+        
         events = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                editor_engine.running = False
+                running = False
             elif event.type == pygame.WINDOWRESIZED:
                 
                 print(event)
             else:
                 events.append(event)
-        editor_engine.Update(events)
+        keys = pygame.key.get_pressed()
+        keysd = pygame.key.get_just_pressed()
+        keysu = pygame.key.get_just_released()
+        editor_engine.Update(events,keys,keysd,keysu)
         editor_engine.Draw()
         window.flip()
         editor_engine.dt = clock.tick(60) / 1_000

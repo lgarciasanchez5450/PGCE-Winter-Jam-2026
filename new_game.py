@@ -11,7 +11,7 @@ from Engine import *
 if __name__ == '__main__':
     pygame.init()
     window = pygame.Window(resizable=True)
-    engine = Engine(window.get_surface())
+    engine = Scene(window.get_surface())
     engine.addSystem(GameData,'data',True)
     
     main_menu_scene = EngineState.empty()

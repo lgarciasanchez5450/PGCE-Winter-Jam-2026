@@ -4,8 +4,8 @@ from Engine import *
 class HierarchyRenderer:
     def __init__(self,hierarchy:'Hierarchy'):
         self.h = hierarchy
-        self.title_font = self.h.engine.assetManager.get('EditorAssets/area_title_font.asset',pygame.Font)
-        self.default_font = self.h.engine.assetManager.get('EditorAssets/default_font.asset',pygame.Font)
+        self.title_font = self.h.engine.assets.get('EditorAssets/area_title_font.asset',pygame.Font)
+        self.default_font = self.h.engine.assets.get('EditorAssets/default_font.asset',pygame.Font)
         
         self.area_title = Text(self.title_font,True,'white')
         

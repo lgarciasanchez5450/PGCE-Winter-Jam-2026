@@ -129,7 +129,7 @@ class Map(BaseSystem[GameState,int,list[int]]):
     def init(self):
         import random
         self.gs_gen = gameSim.generateInterestingGameStates(4,10,5,random.randint(4, 8),2,3,False)
-        self.node_surf = self.engine.assetManager.get('Assets/web_node.asset',pygame.Surface)
+        self.node_surf = self.engine.assets.get('Assets/web_node.asset',pygame.Surface)
         self.ofst = (-self.node_surf.width//2,-self.node_surf.height//2)
         self.font = pygame.font.SysFont('Arial',16)
         self.ntosurf = Text.Mapping[int](self.font,True,'black')

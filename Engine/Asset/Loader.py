@@ -4,7 +4,6 @@ import pygame
 from pygame.font import Font
 from pygame.surface import Surface
 
-from ..Engine import *
 from ..Parser import LiteralParser
 
 if typing.TYPE_CHECKING:
