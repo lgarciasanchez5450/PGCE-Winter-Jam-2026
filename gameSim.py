@@ -160,7 +160,7 @@ def generateSolvableGameState(p:GameStateGenerationParameters) -> GameState:
                 tick += 1
             elif new_node_type == GameStateGenerationParameters.EX_NODE:
                 new_node.explosion_time = tick + 1
-            elif new_node_type == GameStateGenerationParameters.TP_NODE:
+            elif new_node_type == GameStateGenerationParameters.TP_NODE and not isRemainingDictEmpty(p.node_amounts_remaining):
                 new_node.teleport_to = curr_pos
 
             solvable_game_state.nodes.append(new_node)
@@ -277,15 +277,15 @@ def _solve(g_state:GameState,tick:int,i:int,path:list[int],best_path:list[int],n
     return min_len
 
 def generateInterestingGameStates(min_sol_length:int, game_state_paramters_func):
-    game_state_paramters:GameStateGenerationParameters = game_state_paramters_func()
-    total_nodes = game_state_paramters.total_nodes
-    curr_game_state:GameState = generateSolvableGameState(game_state_paramters)
-    shortest_path = solve(curr_game_state, total_nodes)
-    if len(shortest_path) <= min_sol_length or -1 in shortest_path:
-        yield from generateInterestingGameStates(min_sol_length, game_state_paramters_func)
-    else:
-        yield curr_game_state, shortest_path
-        yield from generateInterestingGameStates(min_sol_length, game_state_paramters_func)
+    while True:
+        game_state_paramters:GameStateGenerationParameters = game_state_paramters_func()
+        total_nodes = game_state_paramters.total_nodes
+        curr_game_state:GameState = generateSolvableGameState(game_state_paramters)
+        shortest_path = solve(curr_game_state, total_nodes)
+        if len(shortest_path) <= min_sol_length or -1 in shortest_path:
+            continue
+        else:
+            yield curr_game_state, shortest_path
 
 if __name__ == '__main__':
     for gameState, solution in generateInterestingGameStates(0, defaultGameStateParameters):
