@@ -1,3 +1,6 @@
-path: resources/white_dot.png
-convert:opaque
-scale: 20, 20
+path: resources/node.png
+convert: opaque
+colorkey: 0
+scale: 18,18
+
+

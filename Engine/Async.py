@@ -22,22 +22,30 @@ class WaitFrames:
     def __next__(self):
         self.left -= 1
         if self.left <= 0:
-            raise self.err        
+            raise self.err       
+        
+    def __iter__(self):
+        return self 
 
 class WaitTime:
-    __slots__ = 'end','err','timer'
-    def __init__(self,end:float,timer:typing.Callable[[],float]):
+    __slots__ = 'end','err','timer','len'
+    def __init__(self,end:float,timer:typing.Callable[[],float],len):
         self.timer = timer
         self.end = end
+        self.len = len
         self.err = StopIteration
+        
+    @property
+    def countdown(self):
+        return max(0,(self.end - self.timer() )/ self.len)
         
     @classmethod
     def untilTime(cls,end:float):
-        return cls(end,time.perf_counter)
+        return cls(end,time.perf_counter,end-time.perf_counter())
     
     @classmethod
     def forSeconds(cls,duration:float):
-        return cls(time.perf_counter()+duration,time.perf_counter)
+        return cls(time.perf_counter()+duration,time.perf_counter,duration)
         
     def __await__(self):
         self.err = StopAsyncIteration
@@ -47,6 +55,8 @@ class WaitTime:
         if time.perf_counter() >= self.end:
             raise self.err
 
+    def __iter__(self):
+        return self
 
 
 class Context:

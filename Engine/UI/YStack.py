@@ -1,5 +1,3 @@
-from typing import Iterable
-
 from pygame import Surface
 
 from Engine.UI.Widget import IWidget
@@ -34,6 +32,7 @@ class YStack(Widget):
     
     def updateSize(self, width: int, height: int):
         super().updateSize(width, height)
+        
         for i,child in enumerate(self.children):
             weight = self.weights[i%len(self.weights)]
             dynamic_height = int(weight * height/self.weight_sum) if weight else 0

@@ -3,9 +3,7 @@ import typing
 import numpy as np
 import numpy.typing as npt
 
-from Scripts.Camera import Camera
-
-type Vec2Like = tuple[float,float]|typing.Sequence[float]
+type Vec2Like = tuple[float,float]|typing.Sequence[float]|npt.NDArray
 
 def _check_valid_animation(anim:list[pygame.Surface]):
     if not anim:
@@ -28,30 +26,41 @@ class Bucket:
         self.frame = np.empty(size,np.float32)
         self.fps = np.empty(size,np.float32)
         self.behav_id = np.empty(size,np.uint32)
-        self.alive = np.empty(size,np.bool)
+        self.alive = np.zeros(size,np.bool)
 
 class ArrayProxy[T:npt.NDArray]:
     __slots__ = 'array','mask'
     def __init__(self,array:T,mask:npt.NDArray[np.bool]):
         self.array = array
         self.mask = mask
+    def mask_(self,v):
+        if type(v) in (int,float):
+            return v
+        return v[self.mask]    
+    
     def __iadd__(self,other:npt.NDArray):
-        self.array[self.mask] += other[self.mask]
+        other = self.mask_(other)
+        self.array[self.mask] += other
         return self
     def __isub__(self,other:npt.NDArray):
-        self.array[self.mask] -= other[self.mask]
+        other = self.mask_(other)
+        self.array[self.mask] -= other
         return self
     def __imul__(self,other:npt.NDArray):
-        self.array[self.mask] *= other[self.mask]
+        other = self.mask_(other)
+        self.array[self.mask] *= other
         return self
     def __itruediv__(self,other:npt.NDArray):
-        self.array[self.mask] /= other[self.mask]
+        other = self.mask_(other)
+        self.array[self.mask] /= other
         return self
     def __ifloordiv__(self,other:npt.NDArray):
-        self.array[self.mask] //= other[self.mask]
+        other = self.mask_(other)
+        self.array[self.mask] //= other
         return self
     def __imod__(self,other:npt.NDArray):
-        self.array[self.mask] %= other[self.mask]
+        other = self.mask_(other)
+        self.array[self.mask] %= other
         return self
 
     def __setitem__(self, key:tuple[slice|int,...]|slice, value:npt.NDArray):
@@ -61,7 +70,9 @@ class ArrayProxy[T:npt.NDArray]:
             new_mask[first] = True
             new_mask &= self.mask
             self.array[new_mask,*other] = value[self.mask]
-            
+        elif isinstance(key,np.ndarray):
+            new_mask = np.logical_and(self.mask,key)
+            self.array[new_mask] = value
         else:
             if not (key.start or key.stop or key.step):
                 self.array[self.mask] = value[self.mask]
@@ -89,6 +100,23 @@ class ArrayProxy[T:npt.NDArray]:
     
     __rmul__ = __mul__
     
+    def __gt__(self,other):
+        if isinstance(other,ArrayProxy):other = other.array
+        return self.array > other
+    
+    def __ge__(self,other):
+        if isinstance(other,ArrayProxy):other = other.array
+        return self.array >= other
+    
+    def __lt__(self,other):
+        if isinstance(other,ArrayProxy):other = other.array
+        return self.array < other
+    
+    def __le__(self,other):
+        if isinstance(other,ArrayProxy):other = other.array
+        return self.array <= other
+        
+    
 class BucketProxy:
     __slots__ = 'pos','vel','accel','anim_id','anim_len','frame','fps','behav_id','alive'
     def __init__(self,bucket:Bucket,mask:npt.NDArray[np.bool]):
@@ -102,24 +130,18 @@ class BucketProxy:
         self.behav_id = ArrayProxy(bucket.behav_id,mask)
         self.alive = ArrayProxy(bucket.alive,mask)
         
-class Particles(BaseSystem[()]):
-    def getState(self):
-        return ()
-    
-    def setState(self):
+class Particles:
+    def __init__(self):
         self.buckets:list[Bucket] = []
         self.anim_offst = np.zeros((0,2),np.int32)
         self.anim_len = np.zeros(0,np.int32)
         self.anims:list[list[pygame.Surface]] = []
-        self.behaviours:list[typing.Callable[[Bucket],typing.Any]] = [lambda _:None]
+        self.behaviours:list[typing.Callable[[Bucket,npt.NDArray[np.bool]],typing.Any]] = [lambda *_:None]
         self.layer = 0
         self._last_i = 0
 
-    def init(self):
-        self.camera = self.engine.getSystem(Camera)
         
-    def update(self):
-        dt = self.engine.dt
+    def update(self,dt:float):
         i = 0
         
         while i < len(self.buckets):
@@ -127,10 +149,10 @@ class Particles(BaseSystem[()]):
             if b.i:
                 if self._last_i < i+1:
                     self._last_i = i+1
-                behaviours = np.unique(b.behav_id) #TODO: slow
+                behaviours = np.unique(b.behav_id[b.alive]) #TODO: slow
                 for behaviour_id in behaviours:
                     behaviour = self.behaviours[int(behaviour_id)]
-                    behaviour(BucketProxy(b,b.behav_id==behaviour_id)) # pyright: ignore[reportArgumentType]
+                    behaviour(b,b.behav_id==behaviour_id)
                     
                 if not np.any(b.alive): 
                     b.i = 0
@@ -138,21 +160,19 @@ class Particles(BaseSystem[()]):
                 b.pos += b.vel * dt
                 b.vel += b.accel * dt
                 b.frame += b.fps * dt
+            i += 1
         self._last_i = 0
         
-    def draw(self):
-        camera_offset = self.camera.offset
+    def draw(self,surf:pygame.Surface,offset:tuple[int,int]):
 
         for b in self.buckets:
-            pos = np.floor(b.pos).astype(np.int32) + camera_offset
+            pos = np.floor(b.pos)[b.alive].astype(np.int32) + offset
             anim_ids = b.anim_id[b.alive]
             pos += self.anim_offst[anim_ids]
             frame = b.frame.astype(np.int32)
             frame %= b.anim_len
             
-            self.engine.draw(Drawable.FBlits(
-                (self.anims[anim_id][frame],pos) for anim_id,frame,pos in zip(anim_ids,frame,pos)
-            ))
+            surf.fblits([(self.anims[anim_id][frame],pos) for anim_id,frame,pos in zip(anim_ids,frame,pos)])
             
     def setLayer(self,layer:int):
         self.layer = layer
@@ -184,7 +204,7 @@ class Particles(BaseSystem[()]):
         self.anim_len[anim_id] = len(anim)
         self.anims[anim_id] = anim.copy()
         
-    def addBehaviour(self,behaviour:typing.Callable[[Bucket],typing.Any]) -> int:
+    def addBehaviour(self,behaviour:typing.Callable[[Bucket,npt.NDArray[np.bool]],typing.Any]) -> int:
         self.behaviours.append(behaviour)
         return len(self.behaviours) - 1
         
