@@ -16,7 +16,7 @@ class MainMenu(BaseSystem[()]):
     def init(self):
         self.font = self.engine.assets.get('EditorAssets/default_font.asset',pygame.Font)
         self.text = Text.Mapping[str](self.font,True,'white','gray')
-        self.title_card = self.engine.assets.get('Resources/title_card.png',pygame.Surface)
+        self.title_card = self.engine.assets.get('Resources/realTitleCard.png',pygame.Surface)
         self.title_card_rect = self.title_card.get_rect()
         self.transition_to_level_menu = False
         self.transition_to_settings = False

@@ -107,7 +107,7 @@ class MainMenu(Scene):
     def __init__(self, viewport: Surface, assets: AssetManager,game_state:'Game'):
         super().__init__(viewport, assets)
         self.state_m = game_state
-        self.title_surf = assets.get('./Resources/title_card.png',pygame.Surface)
+        self.title_surf = assets.get('./Resources/realTitleCard.png',pygame.Surface)
         self.font = assets.get('./EditorAssets/default_font.asset',pygame.Font)
         self.text_renderer = Text.Mapping[str](self.font,True,'white')
         self.createUI()
@@ -226,5 +226,5 @@ class MainMenu(Scene):
         self.screen.fill((14,14,14))
         # pygame.draw.rect(self.screen,'green',self.cur_selection.rect,2,4)
         self.ui.draw(self.screen)
-        pygame.draw.rect(self.screen,'red',(self.sel_rect_pos.getValue(),self.sel_rect_size.getValue()),2,5)
+        pygame.draw.rect(self.screen,'blue',(self.sel_rect_pos.getValue(),self.sel_rect_size.getValue()),2,5)
         

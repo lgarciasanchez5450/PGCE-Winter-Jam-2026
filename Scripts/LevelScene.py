@@ -127,6 +127,8 @@ class LevelScene(Scene):
             if has_collapsed: continue
             if not edge.cycle[(self.tick)%len(edge.cycle)]: 
                 self.draw(Drawable.Line((50,50,50),poss[edge.a_node],poss[edge.b_node],3),layer=1)
+            elif len(edge.cycle) > 1:
+                self.draw(Drawable.Line('deeppink3',poss[edge.a_node],poss[edge.b_node],3),layer=1)
             else:
                 self.draw(Drawable.Line('white',poss[edge.a_node],poss[edge.b_node],3),layer=1)
         poss2 = poss + (-self.node_surf.width//2,-self.node_surf.height//2)   

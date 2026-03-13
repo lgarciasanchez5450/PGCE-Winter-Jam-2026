@@ -42,9 +42,9 @@ class Game:
         
         def f():
             params = defaultGameStateParameters()
-            params.node_amounts_remaining[GameStateGenerationParameters.TP_NODE] = 0
-            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 0
-            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 0
+            params.node_amounts_remaining[GameStateGenerationParameters.TP_NODE] = 1
+            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 1
+            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 1
             params.node_amounts_remaining[GameStateGenerationParameters.N_NODE] = 8
             params.edge_amounts_remaining[GameStateGenerationParameters.N_EDGE] += 1
             return params
