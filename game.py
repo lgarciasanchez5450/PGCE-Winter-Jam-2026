@@ -87,27 +87,6 @@ class Game:
             pygame.mixer_music.set_volume(0)
         else:
             pygame.mixer_music.set_volume(1)
-            
-
-        def f():
-            params = defaultGameStateParameters()
-            params.node_amounts_remaining[GameStateGenerationParameters.TP_NODE] = 1
-            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 1
-            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 1
-            params.node_amounts_remaining[GameStateGenerationParameters.N_NODE] = 8
-            params.edge_amounts_remaining[GameStateGenerationParameters.N_EDGE] += 1
-            return params
-        
-        gen = generateInterestingGameStates(5,f)
-        self.main_levels:list[GameState] = [
-            next(gen)[0], # 1
-            next(gen)[0], # 2
-            next(gen)[0], # 3
-            next(gen)[0], # 4
-            next(gen)[0], # 5
-            next(gen)[0], # 6
-        ]
-        self.startScene(self.main_menu)
 
     def handleEvent(self,event:pygame.Event):
         if event.type == pygame.QUIT:
