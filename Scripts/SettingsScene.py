@@ -76,9 +76,11 @@ class SettingsScene(Scene):
             if self.cur_selection.texts[0] == 'Mute SFX':
                 self.cur_selection.i = 1-self.cur_selection.i
                 self.state_m.sfx_muted = bool(self.cur_selection.i)
+                self.state_m.toggleSFXMute(self.state_m.sfx_muted)
             if self.cur_selection.texts[0] == 'Mute Music':
                 self.cur_selection.i = 1-self.cur_selection.i
                 self.state_m.music_muted = bool(self.cur_selection.i)
+                self.state_m.toggleSongMute(self.state_m.music_muted)
             if self.cur_selection.texts[0].startswith('Endless Difficulty: '):
                 self.cur_selection.i += 1
                 self.cur_selection.i %= len(self.cur_selection.texts)
@@ -88,6 +90,8 @@ class SettingsScene(Scene):
                     self.state_m.endless_difficulty = 'medium'
                 elif self.cur_selection == 2:
                     self.state_m.endless_difficulty = 'hard'
+                
+                self.state_m.endless_level.updateDifficulty()
         else:
             if self.cur_selection.texts == 'Back':
                 self.state_m.async_ctx.add(transitionToScene(self.state_m.main_menu))

@@ -39,9 +39,56 @@ class Game:
         self.settings = SettingsScene(self.screen,self.asset_manager,self)
         self.level_menu = LevelMenu(self.screen,self.asset_manager,self)
         self.endless_level = LevelSceneEndless(self.screen,self.asset_manager,self)
+
+        self.sounds = {
+            "move" : pygame.Sound("./Resources/Audio/SFX/Move/Gmove1.wav"),
+            "freeze" : pygame.Sound("./Resources/Audio/SFX/Freeze/Gfreeze3.wav"),
+            "explode" : pygame.Sound("./Resources/Audio/SFX/Explode/Gexplosion1.wav"),
+            "teleport" : pygame.Sound("./Resources/Audio/SFX/Teleport/Gteleport3.wav"),
+            "levelReset" : pygame.Sound("./Resources/Audio/SFX/LevelReset/GlevelReset.wav"),
+            "changeEdge" : pygame.Sound("./Resources/Audio/SFX/ChangeEdge/GchangeEdge2.wav"),
+            "levelComplete" : pygame.Sound("./Resources/Audio/SFX/LevelComplete/GlevelComplete1.wav"),
+        } 
+
+        pygame.mixer_music.load("./Resources/Audio/Songs/GSong2.wav")
+        pygame.mixer_music.play(-1)
+
+        def f():
+            params = defaultGameStateParameters()
+            params.node_amounts_remaining[GameStateGenerationParameters.TP_NODE] = 1
+            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 1
+            params.node_amounts_remaining[GameStateGenerationParameters.FR_NODE] = 1
+            params.node_amounts_remaining[GameStateGenerationParameters.N_NODE] = 8
+            params.edge_amounts_remaining[GameStateGenerationParameters.N_EDGE] += 1
+            return params
         
+        gen = generateInterestingGameStates(5,f)
+        self.main_levels:list[GameState] = [
+            next(gen)[0], # 1
+            next(gen)[0], # 2
+            next(gen)[0], # 3
+            next(gen)[0], # 4
+            next(gen)[0], # 5
+            next(gen)[0], # 6
+        ]
+        self.startScene(self.main_menu)
+    
+    def toggleSFXMute(self, muted:bool):
+        if muted:
+            volume = 0
+        else:
+            volume = 0.5
+
+        for sfx in self.sounds.values():
+            sfx.set_volume(volume)
         
-        
+    def toggleSongMute(self, muted:bool):
+        if muted:
+            pygame.mixer_music.set_volume(0)
+        else:
+            pygame.mixer_music.set_volume(1)
+            
+
         def f():
             params = defaultGameStateParameters()
             params.node_amounts_remaining[GameStateGenerationParameters.TP_NODE] = 1

@@ -98,14 +98,18 @@ class LevelScene(Scene):
                 if self.possible_moves:
                     if event.key == pygame.K_z: 
                         self.taking_input = False
+                        self.state_m.sounds["move"].play()
                         self.moveToNode(self.possible_moves[self.move_option_i])
                     elif event.key == pygame.K_LEFT:
+                        self.state_m.sounds["changeEdge"].play()
                         self.move_option_i -= 1
                         self.move_option_i %= len(self.possible_moves)
                     elif event.key == pygame.K_RIGHT:
+                        self.state_m.sounds["changeEdge"].play()
                         self.move_option_i += 1
                         self.move_option_i %= len(self.possible_moves)
                 if event.key == pygame.K_r:
+                    self.state_m.sounds["levelReset"].play()
                     self.reset()
                     
         return super().handleEvent(event)
@@ -221,6 +225,8 @@ class LevelScene(Scene):
         return out
     
     def simulateStep(self,move_angle):
+        if self.gameState.nodes[self.cur_node].freeze_time != 0:
+            self.state_m.sounds["freeze"].play()
     
         for _ in range(1+self.gameState.nodes[self.cur_node].freeze_time):
             w = Async.WaitTime.forSeconds(0.2)
@@ -234,10 +240,12 @@ class LevelScene(Scene):
             self.tick += 1
             for i,node in enumerate(self.gameState.nodes):
                 if node.explosion_time != -1 and node.explosion_time == self.tick:
+                    self.state_m.sounds["explode"].play()
                     self.spawnExplosion(i)
                     
         while self.gameState.nodes[self.cur_node].teleport_to != -1:
             w = Async.WaitTime.forSeconds(0.2)
+            self.state_m.sounds["teleport"].play()
             self.cur_node = self.gameState.nodes[self.cur_node].teleport_to
             cam_start = self.camera_pos.copy()
             for _ in w:
@@ -255,7 +263,15 @@ class LevelScene(Scene):
         self.taking_input = True
         
     def onWin(self):
-        self.state_m.stopScene(self)
+        self.state_m.sounds["levelComplete"].play()
+        
+        def _():
+            if False: yield
+            self.state_m.stopScene(self)
+            self.state_m.startScene(self.state_m.level_menu)
+
+        self.state_m.async_ctx.add(_())
+        
         
     def spawnExplosion(self,node_i:int):
         pos = self.node_world.getPos(node_i)

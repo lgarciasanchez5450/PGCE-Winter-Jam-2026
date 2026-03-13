@@ -116,7 +116,7 @@ class MainMenu(Scene):
     def createUI(self):
         button_stack = ui.YStack([0])
         self.button1 = Button(self.text_renderer,'Play Levels',size=(150,50))
-        self.button2 = Button(self.text_renderer,'Play Endless',size=(150,50))
+        self.button2 = Button(self.text_renderer,'Play Random',size=(150,50))
         self.button3 = Button(self.text_renderer,'Settings',size=(150,50))
         self.button4 = Button(self.text_renderer,'Quit',size=(150,50))
         self.selections = {
@@ -152,11 +152,14 @@ class MainMenu(Scene):
 
     def doButton(self,button:Button):
         match button.texts:
-            case 'Play Endless':
+            case 'Play Random':
                 def _():
                     if False: yield
                     self.state_m.startScene(self.state_m.endless_level)
                     self.state_m.stopScene(self)
+
+                self.state_m.endless_level.setup(next(self.state_m.endless_level.level_gen)[0])
+                self.state_m.async_ctx.add(_())
             case 'Play Levels':
                 def _():
                     if False: yield
@@ -169,6 +172,7 @@ class MainMenu(Scene):
                     if False: yield
                     self.state_m.startScene(self.state_m.settings)
                     self.state_m.stopScene(self)
+
                 self.state_m.async_ctx.add(_())
             case 'Quit':
                 self.state_m.running = False

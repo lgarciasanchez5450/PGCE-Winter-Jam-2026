@@ -9,7 +9,9 @@ class LevelSceneEndless(LevelScene):
     def __init__(self, viewport: Surface, assets: AssetManager, game_state):
         super().__init__(viewport, assets, game_state)
         self.state_m = game_state
+        self.updateDifficulty()
 
+    def updateDifficulty(self):
         match self.state_m.endless_difficulty:
             case "easy":
                 f = buildGameStateParametersFunc(0, 1, 0, 1, 0, 1, 3, 5, 3, 5, 2, 3, 0.25, 0.75)
@@ -21,12 +23,12 @@ class LevelSceneEndless(LevelScene):
                 f = buildGameStateParametersFunc(0, 5, 0, 5, 0, 5, 7, 10, 6, 8, 4, 6, 0.25, 0.75)
                 self.level_gen = generateInterestingGameStates(7,f)
 
-        # something might be missing here - Cai
-        
     def onWin(self):
-        # GENERATE NEW LEVEL. CAN USE self.state_m.endless_difficulty 
-        # WILL DO TY LEO! - CAI
-
-        self.setup(next(self.level_gen)[0])
-        self.Start()
+        self.state_m.sounds["levelComplete"].play()
         
+        def _():
+            if False: yield
+            self.state_m.stopScene(self)
+            self.state_m.startScene(self.state_m.main_menu)
+
+        self.state_m.async_ctx.add(_())
