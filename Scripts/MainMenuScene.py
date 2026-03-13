@@ -153,7 +153,10 @@ class MainMenu(Scene):
     def doButton(self,button:Button):
         match button.texts:
             case 'Play Endless':
-                pass
+                def _():
+                    if False: yield
+                    self.state_m.startScene(self.state_m.endless_level)
+                    self.state_m.stopScene(self)
             case 'Play Levels':
                 def _():
                     if False: yield

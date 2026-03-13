@@ -9,6 +9,7 @@ from Scripts.GameData import GameData
 # from Scripts.MainMenu import MainMenu
 from Scripts.MainMenuScene import MainMenu
 from Scripts.LevelScene import LevelScene
+from Scripts.EndlessLevelScene import LevelSceneEndless
 from Scripts.SettingsScene import SettingsScene
 from Scripts.Animation import AnimationLoader,Animation
 from Scripts import SerializeHelper
@@ -37,6 +38,7 @@ class Game:
         self.main_menu = MainMenu(self.screen,self.asset_manager,self)
         self.settings = SettingsScene(self.screen,self.asset_manager,self)
         self.level_menu = LevelMenu(self.screen,self.asset_manager,self)
+        self.endless_level = LevelSceneEndless(self.screen,self.asset_manager,self)
         
         
         
