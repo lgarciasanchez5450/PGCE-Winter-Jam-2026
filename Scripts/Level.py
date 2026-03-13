@@ -19,6 +19,7 @@ class LevelSystem(BaseSystem[GameState]):
 
         self.character_node = self.handleChangeToTeleportNode(self.character_node)
         self.tick += self.gamestate.nodes[self.character_node].freeze_time
+        self.map.setTick(self.tick)
         #print(gamestate)
 
     def init(self):
@@ -26,7 +27,6 @@ class LevelSystem(BaseSystem[GameState]):
         self.map = self.engine.getSystem(MapDrawer)
 
         self.map.setMap(self.gamestate.nodes,self.gamestate.edges)
-        self.map.setTick(0)
         
     def EngineStateTransition(self,state:EngineState):
         t = time.perf_counter()
@@ -125,8 +125,10 @@ class LevelSystem(BaseSystem[GameState]):
             
     def possibleMoves(self,node:int) -> list[int]:
         out:list[int] = []
+        if self.gamestate.nodes[self.character_node].explosion_time != -1 and self.tick >= self.gamestate.nodes[self.character_node].explosion_time: return out
         for node in range(len(self.gamestate.nodes)):
             if node == self.character_node: continue
+            if self.gamestate.nodes[node].explosion_time != -1 and self.tick >= self.gamestate.nodes[node].explosion_time: continue
             edge = self.connection(self.character_node,node)
             if edge is None: continue
             if not edge.cycle[(self.tick)%len(edge.cycle)]: continue
