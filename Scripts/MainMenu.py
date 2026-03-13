@@ -1,4 +1,5 @@
 from Engine import *
+from Engine import Scene
 from Scripts.Camera import Camera
 from Scripts.MapDrawer import MapDrawer
 from Scripts.Level import LevelSystem
@@ -10,28 +11,37 @@ class MainMenu(BaseSystem[()]):
         return ()
     
     def setState(self):
-        
         return
     
     def init(self):
-        self.font = self.engine.assetManager.get('EditorAssets/default_font.asset',pygame.Font)
+        self.font = self.engine.assets.get('EditorAssets/default_font.asset',pygame.Font)
         self.text = Text.Mapping[str](self.font,True,'white','gray')
-        self.title_card = self.engine.assetManager.get('Resources/title_card.png',pygame.Surface)
+        self.title_card = self.engine.assets.get('Resources/title_card.png',pygame.Surface)
         self.title_card_rect = self.title_card.get_rect()
+        self.transition_to_level_menu = False
+        self.transition_to_settings = False
         
-    def startLevel(self):
-        #transition to other state
-        # level_state = EngineState.empty()
-        # self.engine.addSystemToState(level_state,Camera,'',pygame.Vector2())
-        # self.engine.addSystemToState(level_state,MapDrawer,'',[],[])
-        # self.engine.addSystemToState(level_state,Level,'',next(generateInterestingGameStates(1,10,5,7,2,3,False))[0])
-        self.engine.startCoroutine(self.EngineStateTransition(self.engine.getScene('level menu')))
+    def __init__(self, engine: Scene, name: str):
+        super().__init__(engine, name)
+        self.addHook(Events.KeyDown,self.onKeyDown)
         
-    def update(self):
-        if self.engine.keys_down[pygame.K_z]:
-            self.startLevel()
-        if self.engine.keys_down[pygame.K_x]:
-            pass
+    def onKeyDown(self,event:Events.KeyDown):
+        if event.key == pygame.K_z:
+            print("GOING TO LEVELS")
+            self.transition_to_level_menu = True
+            return True
+        elif event.key == pygame.K_x:
+            print("GOING TO SETTINGS")
+            self.transition_to_settings = True
+            return True
+        return False
+
+        
+    # def update(self):
+    #     if self.engine.keys_down[pygame.K_z]:
+    #         self.transition_to_level_menu = True
+    #     if self.engine.keys_down[pygame.K_x]:
+    #         self.transition_to_settings = True
         
     def draw(self):
         surf_size = self.engine.screen.size

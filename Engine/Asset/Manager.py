@@ -1,5 +1,4 @@
 import weakref
-from ..Engine import *
 from .Loader import *
 
 class RecursiveAssetDefinition(Exception): ...

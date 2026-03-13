@@ -2,8 +2,9 @@ import typing
 import os
 import sys
 from .Serialize import Writer, Reader
+from .Events import *
 if typing.TYPE_CHECKING:
-    from Engine import Engine
+    from Engine import Scene
 def _cls_module_path(cls:type):
     return os.path.abspath(sys.modules[cls.__module__].__file__ or '')
 
@@ -11,10 +12,9 @@ _fqn_to_cls:dict[str,type['BaseSystem']] = {}
 class BaseSystem[*T]:
     _fqn_to_cls = _fqn_to_cls
     name:str
-    engine:'Engine'
-    static:bool
+    engine:'Scene'
     _fqn:str = 'BaseSystem'
-    __slots__ = 'name','engine','static','initialized'
+    __slots__ = 'name','engine','event_map'
     
     def __init_subclass__(cls) -> None:
         necessary_attrs = []#['serialize','deserialize']
@@ -27,16 +27,27 @@ class BaseSystem[*T]:
         assert cls._fqn not in _fqn_to_cls, f'System FQN Clash {repr(cls._fqn)}\nFile A: {_cls_module_path(cls)}\nFile B: {_cls_module_path(_fqn_to_cls[cls._fqn])}'
         _fqn_to_cls[cls._fqn] = cls
 
-    def __init__(self,engine:'Engine',name:str,static:bool):
+    def __init__(self,engine:'Scene',name:str):
         self.engine = engine
         self.name = name
-        self.static = static
-        self.initialized = False
+        self.event_map:dict[int,typing.Callable[...,typing.Any]] = {}
+      
+    def addHook[E:BaseEvent](self,event:type[E],func:typing.Callable[[E],typing.Any]):
+        if event.type in self.event_map:
+            raise RuntimeError(f'Multiple Callbacks for event {event.__name__} [{event.type}]')
+        self.event_map[event.type] = func
         
+    def onEvent(self,event:pygame.Event):
+        hook = self.event_map.get(event.type)
+        if hook is not None:
+            return hook(event)
+        return False
     
     def onEngineEvent(self,event): ... #gets called misc. engine events
     
     def init(self): ... #on initialization
+    
+    def stop(self): ... #on stop #no other function will be called until init
     
     def update(self): ... #on every frame
     

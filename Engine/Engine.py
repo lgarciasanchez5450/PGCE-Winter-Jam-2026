@@ -5,9 +5,10 @@ from .System import BaseSystem
 from .Asset.Manager import AssetManager
 from .Drawable import Drawable
 from .Serialize import Reader, Writer,isSerializeable
+from .EventManager import EventManager
 from . import Async
 __all__ = [
-    'Engine','EngineEvent','EngineState'
+    'Scene','EngineEvent','EngineState'
 ]
 
 class EngineEvent:
@@ -16,20 +17,17 @@ class EngineEvent:
     STOPPED = 3
 
 class EngineState:
-    systems:list[tuple[str,str,bool,tuple]]
-    @classmethod
-    def empty(cls):
-        out = cls()
-        out.systems = []
-        return out
+    systems:list[tuple[str,str,tuple]]
+    
+    def __init__(self):
+        self.systems = []
 
     def serialize(self) -> bytes:
         writer = Writer()
         writer.writeInt(len(self.systems))
-        for fqn,name,static,state in self.systems:
+        for fqn,name,state in self.systems:
             writer.writeStr(fqn)
             writer.writeStr(name)
-            writer.writeBool(static)
             writer.writeInt(len(state))
             for item in state:
                 writer.writeType(item)
@@ -46,50 +44,52 @@ class EngineState:
     def deserialize(cls,b:bytes) -> 'EngineState':
         reader = Reader(b)
         num_systems = reader.readInt()
-        systems:list[tuple[str,str,bool,tuple[typing.Any,...]]] = []
+        systems:list[tuple[str,str,tuple[typing.Any,...]]] = []
         for _ in range(num_systems):
             fqn = reader.readStr()
             name = reader.readStr()
-            static = reader.readBool()
             state_len = reader.readInt()
             state:list[typing.Any] = []
             for _ in range(state_len):
                 typ = reader.readType()
                 obj = reader.read(typ)
                 state.append(obj)
-            systems.append((fqn,name,static,tuple(state)))
+            systems.append((fqn,name,tuple(state)))
 
         e_state = EngineState()
         e_state.systems = systems
         return e_state
 
-    def setSystemArgs[*TT](self,typ:type[BaseSystem[*TT]],name:str,static:bool,*args:*TT):
-        for i,(fqn,sys_name,sys_static,args) in enumerate(self.systems):
-            if typ._fqn == fqn and name == sys_name and static == sys_static:
-                self.systems[i] = (fqn,sys_name,sys_static,args)
+    def setSystemArgs[*TT](self,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
+        for i,(fqn,sys_name,_) in enumerate(self.systems):
+            if typ._fqn == fqn and name == sys_name:
+                self.systems[i] = (fqn,sys_name,args)
                 return
         raise LookupError
-class Engine:
+    
+    def addSystem[*TT](self,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
+        if not isSerializeable(args):
+            raise RuntimeError(f'Serialization Error: System \'{typ.__name__}\' returned an unserializable state: {repr(args)}')
+        self.systems.append((str(typ._fqn),str(name),args))
+        
+class Scene:
     systems:list[BaseSystem]
     layers:defaultdict[int,list[Drawable]]
-    scenes:dict[str,EngineState]
     dt:float
-    def __init__(self,viewport:pygame.Surface):
+    def __init__(self,viewport:pygame.Surface,assets:AssetManager):
         self.screen = viewport
-        self.running = False
-        self.initialized = False
+        self.started = False
         self.systems = []
         self.layers = defaultdict(list)
         self.dt = 0
-        self.assetManager = AssetManager()
+        self.assets = assets
         self.async_ctx = Async.Context()
-        self.scenes = {}
-        
+
         
     def draw(self,drawable:Drawable,layer:int=0):
         self.layers[layer].append(drawable)
 
-    def getSystem[TBS:BaseSystem](self,type_:type[TBS],name:str|None=None) -> TBS:
+    def getSystem[BS:BaseSystem](self,type_:type[BS],name:str|None=None) -> BS:
         for system in self.systems:
             if type(system) is not type_:
                 continue
@@ -99,14 +99,13 @@ class Engine:
             return system
         raise LookupError
        
-    def addSystem[*TT](self,typ:type[BaseSystem[*TT]],name:str,static:bool,*args:*TT):
-        system = typ(self,name,static)
-        try:system.setState(*args)
-        except Exception: pass
-        if self.initialized:
+    def addSystem[*TT](self,typ:type[BaseSystem[*TT]],name:str,*args:*TT):
+        system = typ(self,name)
+        system.setState(*args)
+        if self.started:
             system.init()
-            system.initialized = True
         self.systems.append(system)
+        return system
 
     def removeSystem(self,system:BaseSystem):
         self.systems.remove(system)
@@ -120,48 +119,54 @@ class Engine:
     def checkCoroutine(self,coro:typing.Generator|typing.Awaitable):
         return self.async_ctx.isAlive(coro) # pyright: ignore[reportArgumentType]
 
-    def addSystemToState[*TT](self,state:EngineState,typ:type[BaseSystem[*TT]],name:str,static:bool,*args:*TT):
-        if not isSerializeable(args):
-            raise RuntimeError(f'Serialization Error: System \'{typ.__name__}\' returned an unserializable state: {repr(args)}')
-        state.systems.append((str(typ._fqn),str(name),bool(static),args))
-
     def getState(self) -> EngineState:
-        e_state = EngineState()
-        e_state.systems = []
+        state = EngineState()
         for system in self.systems:
-            self.addSystemToState(e_state,type(system),system.name,system.static,system.getState())
-        return e_state
+            state.addSystem(type(system),system.name,system.getState())
+        return state
     
     def loadState(self,state:EngineState):
-        for sys_fqn,sys_name,sys_static,sys_state  in state.systems:
+        for sys_fqn,sys_name,sys_state  in state.systems:
             system_cls = BaseSystem._fqn_to_cls[sys_fqn]
-            self.addSystem(system_cls,sys_name,sys_static,*sys_state)
+            self.addSystem(system_cls,sys_name,*sys_state)
         
     def clearState(self):
-        for system in self.systems[:]:
-            if not system.static:
-                self.systems.remove(system)
-        self.initialized = False
+        self.systems.clear()
+        self.started = False
 
     def broadcastEvent(self,event):
         for system in self.systems:
             system.onEngineEvent(event)   
        
     ### Methods only for Engine owner ###   
-         
-    def Initialize(self):
-        self.initialized = True
+    
+    def Start(self):
+        if self.started: return False
         for system in self.systems:
-            if not system.initialized:
-                system.init()
-                system.initialized = True
+            system.init()
+        self.started = True
         self.broadcastEvent(EngineEvent.INITIALIZED)
+        return True
+        
+    def Stop(self):
+        if not self.started: return False
+        for system in self.systems:
+            system.stop()
+        self.started = False
+        self.broadcastEvent(EngineEvent.STOPPED)
+        return True
+    
+    def handleEvent(self,event:pygame.Event):
+        for system in self.systems:
+            if system.onEvent(event): return True
+        return False
 
-    def Update(self,events:list[pygame.Event],keys:pygame.key.ScancodeWrapper,keys_down:pygame.key.ScancodeWrapper,keys_up:pygame.key.ScancodeWrapper):
+    def Update(self,keys:pygame.key.ScancodeWrapper,keys_down:pygame.key.ScancodeWrapper,keys_up:pygame.key.ScancodeWrapper):
+        if not self.started: raise RuntimeError(f'Update Before Start')
         self.keys = keys
         self.keys_down = keys_down
         self.keys_up = keys_up
-        self.events = events
+        
         for system in self.systems:
             system.update()
         for system in self.systems:
@@ -169,6 +174,7 @@ class Engine:
         self.async_ctx.tick()
         
     def Draw(self):
+        if not self.started: raise RuntimeError(f'Draw Before Start')
         for layer_num in sorted(self.layers.keys()):
             for drawable in self.layers[layer_num]:
                 drawable.draw(self.screen)
@@ -177,8 +183,3 @@ class Engine:
     def SetViewport(self,viewport:pygame.Surface):
         self.screen = viewport
         
-    def addScene(self,name:str,state:EngineState):
-        self.scenes[name] = state
-        
-    def getScene(self,name:str):
-        return self.scenes[name]

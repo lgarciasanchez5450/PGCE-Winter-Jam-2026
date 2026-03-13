@@ -1,5 +1,5 @@
 from Engine import *
-from Engine import Engine
+from Engine import Scene
 from gameSim import Node,Edge
 from Engine.VerletPhysics import VerletPhysics
 from Scripts.Camera import Camera
@@ -67,7 +67,7 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
 
     def init(self):
         self.world = VerletPhysics(0,0.1)
-        self.node_surf = self.engine.assetManager.get('Assets/web_node.asset',pygame.Surface)
+        self.node_surf = self.engine.assets.get('Assets/web_node.asset',pygame.Surface)
         self.node_surf_gray = self.node_surf.copy()
         self.node_surf_gray.set_alpha(100)
         self.font = pygame.font.SysFont('Arial',16)

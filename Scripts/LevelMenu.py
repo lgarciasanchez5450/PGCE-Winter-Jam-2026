@@ -82,7 +82,7 @@ class LevelMenu(BaseSystem[()]):
         self.engine.draw(Drawable.Blit(surf),layer=99)
         self.engine.clearState()
         self.engine.loadState(state)
-        self.engine.Initialize()
+        self.engine.Start()
         t = time.perf_counter()
         t_end = t+1
 

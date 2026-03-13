@@ -1,8 +1,13 @@
 import typing
+import types
 import time
 
 T = typing.TypeVar('T')
 T2 = typing.TypeVar('T2')
+
+class Coro(typing.Protocol):
+    def __next__(self): ...
+    def __iter__(self) -> 'Coro': ...
 
 class WaitFrames:
     __slots__ = 'left','err'
@@ -41,8 +46,6 @@ class WaitTime:
     def __next__(self):
         if time.perf_counter() >= self.end:
             raise self.err
-
-
 
 
 

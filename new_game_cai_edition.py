@@ -11,7 +11,7 @@ from Engine import *
 if __name__ == '__main__':
     pygame.init()
     window = pygame.Window(resizable=True)
-    engine = Engine(window.get_surface())
+    engine = Scene(window.get_surface())
     engine.addSystem(GameData,'data',True)
     
     gameStateParamtersFunc = buildGameStateParametersFunc(0, 1, 0, 1, 0, 5, 4, 8, 5, 10, 2, 3, 0.25, 0.75)
