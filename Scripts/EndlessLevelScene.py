@@ -3,10 +3,10 @@ from pygame import Surface
 from Engine.Asset.Manager import AssetManager
 from Scripts.LevelScene import LevelScene
 from gameSim import generateInterestingGameStates,buildGameStateParametersFunc
-from game import Game
+#from game import Game
 
 class LevelSceneEndless(LevelScene):
-    def __init__(self, viewport: Surface, assets: AssetManager, game_state: Game):
+    def __init__(self, viewport: Surface, assets: AssetManager, game_state):
         super().__init__(viewport, assets, game_state)
         self.state_m = game_state
 
@@ -20,11 +20,13 @@ class LevelSceneEndless(LevelScene):
             case "hard":
                 f = buildGameStateParametersFunc(0, 5, 0, 5, 0, 5, 7, 10, 6, 8, 4, 6, 0.25, 0.75)
                 self.level_gen = generateInterestingGameStates(7,f)
+
+        # something might be missing here - Cai
         
     def onWin(self):
         # GENERATE NEW LEVEL. CAN USE self.state_m.endless_difficulty 
         # WILL DO TY LEO! - CAI
-        
+
         self.setup(next(self.level_gen)[0])
         self.Start()
         
