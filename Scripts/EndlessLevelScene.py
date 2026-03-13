@@ -9,19 +9,21 @@ class LevelSceneEndless(LevelScene):
     def __init__(self, viewport: Surface, assets: AssetManager, game_state):
         super().__init__(viewport, assets, game_state)
         self.state_m = game_state
-        self.updateDifficulty()
+        self.updateDifficulty(self.state_m.endless_difficulty)
 
-    def updateDifficulty(self):
-        match self.state_m.endless_difficulty:
-            case "easy":
-                f = buildGameStateParametersFunc(0, 1, 0, 1, 0, 1, 3, 5, 3, 5, 2, 3, 0.25, 0.75)
-                self.level_gen = generateInterestingGameStates(3,f)
-            case "medium":
-                f = buildGameStateParametersFunc(0, 3, 0, 3, 0, 3, 6, 8, 4, 6, 3, 5, 0.25, 0.75)
-                self.level_gen = generateInterestingGameStates(5,f)
-            case "hard":
-                f = buildGameStateParametersFunc(0, 5, 0, 5, 0, 5, 7, 10, 6, 8, 4, 6, 0.25, 0.75)
-                self.level_gen = generateInterestingGameStates(7,f)
+    def updateDifficulty(self, difficulty):
+        if difficulty == "easy":
+            print("E")
+            f = buildGameStateParametersFunc(0, 1, 0, 1, 0, 1, 3, 5, 3, 5, 2, 3, 0.25, 0.75)
+            self.level_gen = generateInterestingGameStates(3,f)
+        elif difficulty == "medium":
+            print("M")
+            f = buildGameStateParametersFunc(0, 3, 0, 3, 0, 3, 6, 8, 4, 6, 3, 5, 0.25, 0.75)
+            self.level_gen = generateInterestingGameStates(5,f)
+        else:
+            print("H")
+            f = buildGameStateParametersFunc(0, 5, 0, 5, 0, 5, 7, 10, 6, 8, 4, 6, 0.25, 0.75)
+            self.level_gen = generateInterestingGameStates(7,f)
 
     def onWin(self):
         self.state_m.sounds["levelComplete"].play()

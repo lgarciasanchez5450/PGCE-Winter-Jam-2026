@@ -84,14 +84,15 @@ class SettingsScene(Scene):
             if self.cur_selection.texts[0].startswith('Endless Difficulty: '):
                 self.cur_selection.i += 1
                 self.cur_selection.i %= len(self.cur_selection.texts)
-                if self.cur_selection == 0:
+                if self.cur_selection.i == 0:
                     self.state_m.endless_difficulty = 'easy'
-                elif self.cur_selection == 1:
+                    self.state_m.endless_level.updateDifficulty("easy")
+                elif self.cur_selection.i == 1:
                     self.state_m.endless_difficulty = 'medium'
-                elif self.cur_selection == 2:
+                    self.state_m.endless_level.updateDifficulty("medium")
+                elif self.cur_selection.i == 2:
                     self.state_m.endless_difficulty = 'hard'
-                
-                self.state_m.endless_level.updateDifficulty()
+                    self.state_m.endless_level.updateDifficulty("hard")
         else:
             if self.cur_selection.texts == 'Back':
                 self.state_m.async_ctx.add(transitionToScene(self.state_m.main_menu))

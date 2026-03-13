@@ -111,6 +111,9 @@ class LevelScene(Scene):
                 if event.key == pygame.K_r:
                     self.state_m.sounds["levelReset"].play()
                     self.reset()
+
+                if event.key == pygame.K_x:
+                    pass
                     
         return super().handleEvent(event)
     
@@ -151,7 +154,10 @@ class LevelScene(Scene):
                 self.draw(Drawable.Blit(self.node_teleport_surf,pos),layer=1)
                 self.draw(Drawable.Blit(self.trb[node.teleport_to],pos+(5,0)),layer=2)
                 
-                self.draw(Drawable.Line('purple',pos,poss[node.teleport_to],3),layer=0)
+                try: # apparently I didn't fix the bug where last node tps to nonexistent node bc this errors
+                    self.draw(Drawable.Line('purple',pos,poss[node.teleport_to],3),layer=0)
+                except:
+                    pass
 
             else:
                 self.draw(Drawable.Blit(self.node_surf,pos),layer=1)
@@ -264,7 +270,7 @@ class LevelScene(Scene):
         
     def onWin(self):
         self.state_m.sounds["levelComplete"].play()
-        
+
         def _():
             if False: yield
             self.state_m.stopScene(self)
