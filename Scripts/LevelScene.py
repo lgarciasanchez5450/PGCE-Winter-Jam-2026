@@ -93,7 +93,6 @@ class LevelScene(Scene):
         if event.type == pygame.WINDOWRESIZED:
             pass
         elif event.type == pygame.KEYDOWN:
-            
             if self.taking_input:
                 if self.possible_moves:
                     if event.key == pygame.K_z: 

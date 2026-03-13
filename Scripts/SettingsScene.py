@@ -18,7 +18,6 @@ class SwitchingButton(Button):
         self.texts = text
         self.i = i
         
-        
     def draw(self, surf: Surface):
         text_surf = self.tr.get(self.texts[self.i])
         surf.blit(text_surf,text_surf.get_rect(center=self.rect.center))
@@ -35,7 +34,7 @@ class SettingsScene(Scene):
         ystack = ui.YStack()
         self.sfx_button = SwitchingButton(self.tr,['Mute SFX','Unmute SFX'],int(self.state_m.sfx_muted),(200,50))
         self.music_button = SwitchingButton(self.tr,['Mute Music','Unmute Music'],int(self.state_m.music_muted),(200,50))
-        self.endless_dif = SwitchingButton(self.tr,['Endless Difficulty: Easy','Endless Difficulty: Medium','Endless Difficulty: Hard'],['easy','medium','hard'].index(self.state_m.endless_difficulty),size=(200,50))
+        self.endless_dif = SwitchingButton(self.tr,['Random Difficulty: Easy','Random Difficulty: Medium','Random Difficulty: Hard'],['easy','medium','hard'].index(self.state_m.endless_difficulty),size=(200,50))
         self.button_back = Button(self.tr,'Back',(200,50))
         self.selections:dict[Button,dict[int,Button]] = {
             self.sfx_button: {pygame.K_DOWN:self.music_button},
@@ -81,7 +80,7 @@ class SettingsScene(Scene):
                 self.cur_selection.i = 1-self.cur_selection.i
                 self.state_m.music_muted = bool(self.cur_selection.i)
                 self.state_m.toggleSongMute(self.state_m.music_muted)
-            if self.cur_selection.texts[0].startswith('Endless Difficulty: '):
+            if self.cur_selection.texts[0].startswith('Random Difficulty: '):
                 self.cur_selection.i += 1
                 self.cur_selection.i %= len(self.cur_selection.texts)
                 if self.cur_selection.i == 0:
