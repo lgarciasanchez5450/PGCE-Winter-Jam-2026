@@ -113,7 +113,12 @@ class LevelScene(Scene):
                     self.reset()
 
                 if event.key == pygame.K_x:
-                    pass
+                    def _():
+                        if False: yield
+                        self.state_m.stopScene(self)
+                        self.state_m.startScene(self.state_m.main_menu)
+
+                    self.state_m.async_ctx.add(_())
                     
         return super().handleEvent(event)
     
