@@ -110,6 +110,8 @@ class MainMenu(Scene):
         self.title_surf = assets.get('./Resources/realTitleCard.png',pygame.Surface)
         self.font = assets.get('./EditorAssets/default_font.asset',pygame.Font)
         self.text_renderer = Text.Mapping[str](self.font,True,'white')
+        # self.controls_text = Text.Text(self.font,True,'white')
+        # self.controls_text.setText('X - Quits Level |  UP/DOWN - Navigate Menu  |  Z - Select Option')
         self.createUI()
         
         
