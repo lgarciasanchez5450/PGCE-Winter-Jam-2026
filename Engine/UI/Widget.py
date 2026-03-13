@@ -1,8 +1,8 @@
 import typing
-from pygame import Rect
+from pygame import Rect, Surface, Event
 
 
-__all__ = ['IWidget','Widget']
+__all__ = ['IWidget','Widget','WidgetUnary']
 
 
 class IWidget(typing.Protocol):
@@ -21,12 +21,18 @@ class IWidget(typing.Protocol):
     
     def updatePos(self,x:int,y:int): ...
     
+    def draw(self,surf:Surface): ...
     
+    def handleEvent(self,event:Event) -> bool|None: ...
+        
+    def iter(self) -> typing.Iterable['IWidget']: ...
 
 class Widget:
     rect:Rect
+    children:list[IWidget]
     def __init__(self) -> None:
         self.rect = Rect()
+        self.children = []
         
     def updateSize(self,width:int,height:int):
         self.rect.width = width
@@ -47,3 +53,34 @@ class Widget:
     
     def getMaxHeight(self) -> int:
         return (1<<64) - 1
+
+    def draw(self,surf:Surface): ...
+    
+    def setChildren(self,children:list[IWidget]):
+        self.children = children
+    
+    def handleEvent(self,event:Event):
+        for child in self.children:
+            if child.handleEvent(event):
+                return True
+        
+    
+    def iter(self) -> typing.Iterable[IWidget]: 
+        yield self
+        for child in self.children:
+            yield from child.iter()
+            
+class WidgetUnary(Widget):
+    child:IWidget
+    def iter(self):
+        yield self
+        yield from self.child.iter()
+        
+    def setChildren(self, children: list[IWidget]): raise NotImplementedError('Unary Widget Cannot set multiple children')
+    
+    def setChild(self,child:IWidget):
+        self.child = child
+        
+    def handleEvent(self, event: Event):
+        if self.child.handleEvent(event):
+            return True

@@ -1,6 +1,8 @@
+from pygame import Surface
+
 from .Widget import *
 
-class Padding(Widget):
+class Padding(WidgetUnary):
     child:IWidget
     def __init__(self,child:IWidget,pad:list[int]):
         super().__init__()
@@ -21,8 +23,6 @@ class Padding(Widget):
         self.padding_bottom,\
         self.padding_left = pad
 
-    def setChild(self,child:IWidget):
-        self.child = child
         
     def getMinWidth(self) -> int:
         return self.padding_left + self.padding_right + self.child.getMinWidth()
@@ -49,3 +49,6 @@ class Padding(Widget):
             x + self.padding_left,
             y + self.padding_top
         )
+    
+    def draw(self, surf: Surface):
+        self.child.draw(surf)
