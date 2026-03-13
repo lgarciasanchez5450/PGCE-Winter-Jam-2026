@@ -18,15 +18,33 @@ class LevelSystem(BaseSystem[GameState]):
         self.move_option_i:int = 0
 
         self.character_node = self.handleChangeToTeleportNode(self.character_node)
+    
         self.tick += self.gamestate.nodes[self.character_node].freeze_time
-        self.map.setTick(self.tick)
-        #print(gamestate)
+
+        try:
+            self.map.setTick(self.tick)
+        except:
+            pass
 
     def init(self):
         self.camera = self.engine.getSystem(Camera)
         self.map = self.engine.getSystem(MapDrawer)
 
         self.map.setMap(self.gamestate.nodes,self.gamestate.edges)
+        self.map.setTick(self.tick)
+
+        self.sounds = {
+            "move" : self.engine.assets.get("./Resources/Audio/Sfx/Move/Gmove1.wav", pygame.Sound),
+            "changeEdge" : self.engine.assets.get("./Resources/Audio/Sfx/ChangeEdge/GchangeEdge2.wav", pygame.Sound),
+            "levelReset" : self.engine.assets.get("./Resources/Audio/Sfx/LevelReset/GlevelReset.wav", pygame.Sound),
+            "explode" : self.engine.assets.get("./Resources/Audio/Sfx/ExplodeNodeExploding/Gexplosion1.wav", pygame.Sound),
+            "freeze" : self.engine.assets.get("./Resources/Audio/Sfx/FreezeNodeFreezing/Gfreeze3.wav", pygame.Sound),
+            "teleport" : self.engine.assets.get("./Resources/Audio/Sfx/TeleportNodeTeleporting/Gteleport3.wav", pygame.Sound),
+            "levelComplete" : self.engine.assets.get("./Resources/Audio/Sfx/LevelComplete/GlevelComplete1.wav", pygame.Sound)
+        }
+
+        for sound in self.sounds.values():
+            sound.set_volume(0.5)
         
     def EngineStateTransition(self,state:EngineState):
         t = time.perf_counter()
@@ -58,9 +76,11 @@ class LevelSystem(BaseSystem[GameState]):
     def update(self):
         if self.engine.keys_down[pygame.K_r]:
             self.setState(self.gamestate)
+            self.sounds["levelReset"].play()
             
         if self.engine.keys_down[pygame.K_SPACE]:
             self.onPlayerNodeChange()
+
         if self.engine.keys_down[pygame.K_x]:
             self.engine.startCoroutine(self.EngineStateTransition(self.engine.getScene('level menu')))
             
@@ -68,6 +88,7 @@ class LevelSystem(BaseSystem[GameState]):
         if delta and self.possible_moves:
             self.move_option_i += delta
             self.move_option_i %= len(self.possible_moves)
+            self.sounds["changeEdge"].play()
             
         if self.engine.keys_down[pygame.K_z] and self.possible_moves:
             node_from = self.character_node
@@ -78,8 +99,14 @@ class LevelSystem(BaseSystem[GameState]):
             self.tick += 1
             self.character_node = self.handleChangeToTeleportNode(self.character_node)
             self.tick += self.gamestate.nodes[self.character_node].freeze_time
+            if (self.gamestate.nodes[self.character_node].freeze_time != 0):
+                self.sounds["freeze"].play()
+            for node in self.gamestate.nodes:
+                if node.explosion_time == self.tick:
+                    self.sounds["explode"].play()
             self.map.setTick(self.tick)
             self.onPlayerNodeChange(keep_angle=move_angle)
+            self.sounds["move"].play()
     
     def draw(self):
         camera_offset = self.camera.offset
@@ -101,6 +128,10 @@ class LevelSystem(BaseSystem[GameState]):
         
     def handleChangeToTeleportNode(self, curr_node:int) -> int:
         while self.gamestate.nodes[curr_node].teleport_to != -1:
+            try:
+                self.sounds["teleport"].play()
+            except:
+                pass
             curr_node = self.gamestate.nodes[curr_node].teleport_to
         return curr_node
 

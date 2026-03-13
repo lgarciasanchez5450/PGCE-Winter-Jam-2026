@@ -263,3 +263,10 @@ class FontLoader(AssetLoader[pygame.Font]):
                 except FileNotFoundError:
                     pass
         raise AssetLoaderError
+
+class SoundLoader(AssetLoader[pygame.Sound]):
+    def __init__(self, asset_manager: 'AssetManager',path:str):
+        super().__init__(asset_manager,path)
+    
+    def load(self) -> pygame.Sound:
+        return pygame.Sound(self.path)

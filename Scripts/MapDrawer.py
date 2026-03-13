@@ -137,6 +137,7 @@ class MapDrawer(BaseSystem[list[Node],list[Edge]]):
                 self.engine.draw(
                     Drawable.Rect('gold2',pygame.Rect(pos[0]-3,pos[1]-3,26,26),width=3),layer=3
                 )
+
                 if node.explosion_time <= self.tick:
                     self.engine.draw(Drawable.Blit(self.node_surf_gray,pos),layer=2)
                 else:

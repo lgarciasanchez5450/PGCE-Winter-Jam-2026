@@ -10,6 +10,7 @@ class AssetManager:
         self._recursive_paths:dict[str,None] = {}
         self.addAssetLoader(pygame.Surface,SurfaceLoader)
         self.addAssetLoader(pygame.Font,FontLoader)
+        self.addAssetLoader(pygame.Sound,SoundLoader)
    
     def addAssetLoader[T](self,typ:type[T],loader:type[AssetLoader[T]]):
         if typ in self.asset_type_loaders:
