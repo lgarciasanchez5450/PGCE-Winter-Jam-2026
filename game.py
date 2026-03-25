@@ -35,16 +35,16 @@ class Game:
         self.endless_difficulty:typing.Literal['easy','medium','hard'] = 'medium'
 
         self.sounds = {
-            "move" : pygame.Sound("./Resources/Audio/SFX/Move/Gmove1.wav"),
-            "freeze" : pygame.Sound("./Resources/Audio/SFX/Freeze/Gfreeze3.wav"),
-            "explode" : pygame.Sound("./Resources/Audio/SFX/Explode/Gexplosion1.wav"),
-            "teleport" : pygame.Sound("./Resources/Audio/SFX/Teleport/Gteleport3.wav"),
-            "levelReset" : pygame.Sound("./Resources/Audio/SFX/LevelReset/GlevelReset.wav"),
-            "changeEdge" : pygame.Sound("./Resources/Audio/SFX/ChangeEdge/GchangeEdge2.wav"),
-            "levelComplete" : pygame.Sound("./Resources/Audio/SFX/LevelComplete/GlevelComplete1.wav"),
+            "move" : pygame.Sound("./Resources/Audio/SFX/Move/Gmove1.ogg"),
+            "freeze" : pygame.Sound("./Resources/Audio/SFX/Freeze/Gfreeze3.ogg"),
+            "explode" : pygame.Sound("./Resources/Audio/SFX/Explode/Gexplosion1.ogg"),
+            "teleport" : pygame.Sound("./Resources/Audio/SFX/Teleport/Gteleport3.ogg"),
+            "levelReset" : pygame.Sound("./Resources/Audio/SFX/LevelReset/GlevelReset.ogg"),
+            "changeEdge" : pygame.Sound("./Resources/Audio/SFX/ChangeEdge/GchangeEdge2.ogg"),
+            "levelComplete" : pygame.Sound("./Resources/Audio/SFX/LevelComplete/GlevelComplete1.ogg"),
         } 
 
-        pygame.mixer_music.load("./Resources/Audio/Songs/GSong2.wav")
+        pygame.mixer_music.load("./Resources/Audio/Songs/GSong2.ogg")
         pygame.mixer_music.play(-1)
 
         def f():
