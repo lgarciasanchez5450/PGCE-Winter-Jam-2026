@@ -1,0 +1,6 @@
+path: resources/node.png
+convert: opaque
+colorkey: 0
+scale: 18,18
+
+

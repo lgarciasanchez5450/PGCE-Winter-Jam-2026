@@ -1,0 +1,6 @@
+frame: ./Resources/gray_dot_0.png
+frame: ./Resources/gray_dot_1.png
+frame: ./Resources/gray_dot_2.png
+frame: ./Resources/gray_dot_3.png
+fps:10
+colorkey: 0

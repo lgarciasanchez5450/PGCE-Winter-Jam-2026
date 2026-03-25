@@ -1,10 +1,7 @@
 from Engine import *
-from Engine import Scene
 from gameSim import Node,Edge
 from Engine.VerletPhysics import VerletPhysics
-from Scripts.Camera import Camera
 import numpy as np
-from Scripts.Map import Map as _
 
 def sort(id_order:list[int],connections:set[tuple[int,int]]):
     def connect(a,b):

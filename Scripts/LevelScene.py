@@ -2,15 +2,16 @@ import typing
 import numpy as np
 from pygame import Surface, Event
 from pygame.key import ScancodeWrapper
-from Engine import UI as ui
+# from Engine import UI as ui
 from Engine import *
 from gameSim import GameState
-from Scripts.MainMenuScene import Button,LerpThing
+# from Scripts.MainMenuScene import Button,LerpThing
 from Scripts.Particles import Particles,Bucket
 from Scripts.MapDrawer import NodeWorld
 from Scripts.Animation import Animation
 from pygame import gfxdraw
 from Scripts import easings
+
 if typing.TYPE_CHECKING:
     from game import Game
     
@@ -148,23 +149,26 @@ class LevelScene(Scene):
             if self.nodeIsExploded(node_i): continue
             
             if node.explosion_time != -1: #is explosion
-                self.draw(Drawable.Blit(self.node_explosion_surf,pos),layer=1)
-                self.draw(Drawable.Blit(self.trb[node.explosion_time],pos+(5,0)),layer=2)
+                self.draw(Drawable.Blit(self.node_explosion_surf,pos),layer=2)
+                if node.explosion_time >= 10:
+                    self.draw(Drawable.Blit(self.trb[node.explosion_time],pos+(0,0)),layer=2)
+                else:
+                    self.draw(Drawable.Blit(self.trb[node.explosion_time],pos+(5,0)),layer=2)
             elif node.freeze_time: #is freeze
-                self.draw(Drawable.Blit(self.node_freeze_surf,pos),layer=1)
+                self.draw(Drawable.Blit(self.node_freeze_surf,pos),layer=2)
                 self.draw(Drawable.Blit(self.trb[node.freeze_time],pos+(5,0)),layer=2)
 
             elif node.teleport_to != -1: #is teleport 
-                self.draw(Drawable.Blit(self.node_teleport_surf,pos),layer=1)
+                self.draw(Drawable.Blit(self.node_teleport_surf,pos),layer=2)
                 self.draw(Drawable.Blit(self.trb[node.teleport_to],pos+(5,0)),layer=2)
                 
                 try: # apparently I didn't fix the bug where last node tps to nonexistent node bc this errors
-                    self.draw(Drawable.Line('purple',pos,poss[node.teleport_to],3),layer=0)
+                    self.draw(Drawable.Line('purple',poss[node_i],poss[node.teleport_to],3),layer=1)
                 except:
                     pass
 
             else:
-                self.draw(Drawable.Blit(self.node_surf,pos),layer=1)
+                self.draw(Drawable.Blit(self.node_surf,pos),layer=2)
                 
             if node_i == self.gameState.end_node:
                 self.draw(Drawable.Circle('green',poss[self.node_world.world.id_to_ind[node_i]],16,2),2)

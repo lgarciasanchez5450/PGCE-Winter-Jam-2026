@@ -110,9 +110,10 @@ class MainMenu(Scene):
         self.title_surf = assets.get('./Resources/realTitleCard.png',pygame.Surface)
         self.font = assets.get('./EditorAssets/default_font.asset',pygame.Font)
         self.text_renderer = Text.Mapping[str](self.font,True,'white')
-        # self.controls_text = Text.Text(self.font,True,'white')
-        # self.controls_text.setText('X - Quits Level |  UP/DOWN - Navigate Menu  |  Z - Select Option')
+        self.controls_text = Text.Text(self.font,True,'white')
+        self.controls_text.setText('X - Quits Level |  UP/DOWN - Navigate Menu  |  Z - Select Option')
         self.createUI()
+        self.controls_text_ui = ui.Place(Image(self.controls_text.render()),0.5,1.0-0.1,0,0)
         
         
     def createUI(self):
@@ -147,6 +148,8 @@ class MainMenu(Scene):
     def Start(self):
         self.ui.updateSize(self.screen.width,self.screen.height)
         self.ui.updatePos(0,0)
+        self.controls_text_ui.updateSize(self.screen.width,self.screen.height)
+        self.controls_text_ui.updatePos(0,0)
         self.sel_rect_pos.setImmediate(pygame.Vector2(self.cur_selection.rect.topleft))
         self.sel_rect_size.setImmediate(pygame.Vector2(self.cur_selection.rect.size))
         
@@ -167,7 +170,6 @@ class MainMenu(Scene):
                     if False: yield
                     self.state_m.startScene(self.state_m.level_menu)
                     self.state_m.stopScene(self)
-                    
                 self.state_m.async_ctx.add(_())
             case 'Settings':
                 def _():
@@ -184,6 +186,9 @@ class MainMenu(Scene):
         if event.type == pygame.WINDOWRESIZED:
             self.ui.updateSize(event.x,event.y)
             self.ui.updatePos(0,0)
+            self.controls_text_ui.updateSize(event.x,event.y)
+            self.controls_text_ui.updatePos(0,0)
+
             self.sel_rect_pos.setImmediate(pygame.Vector2(self.cur_selection.rect.topleft))
             self.sel_rect_size.setImmediate(pygame.Vector2(self.cur_selection.rect.size))
 
@@ -234,6 +239,7 @@ class MainMenu(Scene):
     def Draw(self):
         self.screen.fill((14,14,14))
         # pygame.draw.rect(self.screen,'green',self.cur_selection.rect,2,4)
+        self.controls_text_ui.draw(self.screen)
         self.ui.draw(self.screen)
         pygame.draw.rect(self.screen,'blue',(self.sel_rect_pos.getValue(),self.sel_rect_size.getValue()),2,5)
         

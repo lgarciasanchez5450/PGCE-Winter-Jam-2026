@@ -1,7 +1,5 @@
 if __name__ == '__main__':
-    #We use a lot of introspection that relies on this invariant
-    raise RuntimeError('The Debug module cannot be run directly!')
-
+    raise RuntimeError('This module module cannot be run directly!')
 
 import typing
 import types
@@ -1045,14 +1043,3 @@ def profileResursive(func=None,show_args=False):
     _.__name__ = func.__name__
     return _
 
-
-
-# TRACER = Tracer()
-# #Module-wide aliases to simplify use
-# def trace(func): return TRACER.trace(func)
-# def traceas(func_name=None,fqn=None):return TRACER.traceas(func_name,fqn)
-# def show(): return TRACER.show()
-# def dprint(*values,sep=' ',end='\n'): return TRACER.dprint(*values,sep=sep,end=end)
-# def traceClass(class_:T_TYPE) -> T_TYPE: return TRACER.traceClass(class_)
-# # def traceModule(globals_:dict,outermost_path): return TRACER.traceModule(globals_,outermost_path)
-# def reset(): return TRACER.reset()

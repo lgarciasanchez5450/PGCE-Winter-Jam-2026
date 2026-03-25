@@ -1,9 +1,8 @@
+import asyncio
 import sys
 import typing
 import pygame
 from Engine import *
-from Scripts.Map import Map
-from Scripts.Camera import Camera
 from Scripts.LevelMenuScene import LevelMenu
 from Scripts.GameData import GameData
 # from Scripts.MainMenu import MainMenu
@@ -12,8 +11,8 @@ from Scripts.LevelScene import LevelScene
 from Scripts.EndlessLevelScene import LevelSceneEndless
 from Scripts.SettingsScene import SettingsScene
 from Scripts.Animation import AnimationLoader,Animation
+from Engine import Serialize
 from Scripts import SerializeHelper
-from Scripts import Coros
 from gameSim import GameState,generateInterestingGameStates,defaultGameStateParameters,GameStateGenerationParameters
 
 
@@ -33,12 +32,7 @@ class Game:
         self.data = GameData()
         self.sfx_muted = False
         self.music_muted = False 
-        self.endless_difficulty:typing.Literal['easy','medium','hard'] = 'easy'
-        self.level = LevelScene(self.screen,self.asset_manager,self)
-        self.main_menu = MainMenu(self.screen,self.asset_manager,self)
-        self.settings = SettingsScene(self.screen,self.asset_manager,self)
-        self.level_menu = LevelMenu(self.screen,self.asset_manager,self)
-        self.endless_level = LevelSceneEndless(self.screen,self.asset_manager,self)
+        self.endless_difficulty:typing.Literal['easy','medium','hard'] = 'medium'
 
         self.sounds = {
             "move" : pygame.Sound("./Resources/Audio/SFX/Move/Gmove1.wav"),
@@ -71,6 +65,12 @@ class Game:
             next(gen)[0], # 5
             next(gen)[0], # 6
         ]
+        self.level = LevelScene(self.screen,self.asset_manager,self)
+        self.main_menu = MainMenu(self.screen,self.asset_manager,self)
+        self.endless_level = LevelSceneEndless(self.screen,self.asset_manager,self)
+        self.loadPersistentData()
+        self.settings = SettingsScene(self.screen,self.asset_manager,self)
+        self.level_menu = LevelMenu(self.screen,self.asset_manager,self)
         self.startScene(self.main_menu)
     
     def toggleSFXMute(self, muted:bool):
@@ -101,8 +101,30 @@ class Game:
                 self.w_fullscreen = not self.w_fullscreen
                 return True
                 
-                
+    def loadPersistentData(self):
+        try:
+            with open('settings','rb') as file:
+                reader = Serialize.Reader(file.read())
+            self.sfx_muted = reader.readBool()
+            self.music_muted = reader.readBool()
+            self.endless_difficulty = reader.readStr() # type: ignore
+        except:
+            return
+        finally:
+            self.toggleSFXMute(self.sfx_muted)
+            self.toggleSongMute(self.music_muted)
+            self.endless_level.updateDifficulty(self.endless_difficulty)
         
+    def savePersistentData(self):
+        writer = Serialize.Writer()
+        writer.writeBool(self.sfx_muted)
+        writer.writeBool(self.music_muted)
+        writer.writeStr(self.endless_difficulty)
+        try:
+            with open('settings','wb') as file:
+                file.write(writer.buf)
+        except:
+            pass
     def startScene(self,scene:Scene):
         if not scene.Start(): raise RuntimeError
         self.running_scenes.append(scene)
@@ -111,7 +133,7 @@ class Game:
         if not scene.Stop(): raise RuntimeError
         self.running_scenes.remove(scene)
         
-    def run(self):
+    async def run(self):
         if self.running: raise RuntimeError
         self.running = True
 
@@ -131,12 +153,14 @@ class Game:
                 scene.Draw()
             self.async_ctx.tick()
             self.window.flip()
-            
             dt = self.clock.tick(60) / 1_000
+            await asyncio.sleep(0)  
+            
+        self.savePersistentData()
             
         
             
-def main(argv:list[str]):
+async def main(argv:list[str]):
     if '-t' in sys.argv:
         import debug, os
         tracer = debug.Tracer()
@@ -145,14 +169,14 @@ def main(argv:list[str]):
         tracer.traceModule_(pygame,copy_cls=True,locals_only=True)
         argv_ = argv.copy()
         argv.remove('-t')
-        main(argv_)
+        await main(argv_)
         tracer.show()
         return
     
     pygame.init()
     game = Game()
-    game.run()
+    await game.run()
 
            
 if __name__ == '__main__':
-    main(sys.argv)
+    asyncio.run(main(sys.argv))
